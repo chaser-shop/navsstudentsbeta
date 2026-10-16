@@ -1,0 +1,248 @@
+:root {
+  --bg: #313338;
+  --card: #2b2d31;
+  --deep: #1e1f22;
+  --line: #3f4147;
+  --text: #f2f3f5;
+  --muted: #949ba4;
+  --accent: #5865f2;
+  --green: #23a559;
+  --red: #f23f43;
+  --warn: #f0b232;
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --tab-h: 56px;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { height: 100%; -webkit-text-size-adjust: 100%; }
+/* Висоту застосунку (--app-h) і безпечні зони (--sat/--sab) виставляє device.js під конкретний iPhone. */
+html, body { height: var(--app-h, 100%); overflow: hidden; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overscroll-behavior-y: none;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: 0; padding: 0; text-align: left; touch-action: manipulation; }
+a { color: var(--accent); }
+[hidden] { display: none !important; }
+svg { display: block; flex: none; }
+
+/* Оболонка: шапка + прокручувана середина + нижня панель в одній колонці. Нижня панель — не fixed,
+   а звичайний елемент внизу колонки, тож «зїхати» вгору посеред екрана вона не може. */
+#app {
+  position: fixed; top: 0; left: 0; right: 0; margin: 0 auto; width: 100%; max-width: 640px;
+  height: var(--app-h, 100vh); height: var(--app-h, 100dvh);
+  display: flex; flex-direction: column; overflow: hidden; background: var(--bg);
+}
+
+/* ── шапка й вкладки ── */
+.topbar {
+  flex: none; z-index: 5; display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; min-height: calc(48px + var(--sat)); padding: var(--sat) 8px 0 16px;
+  background: var(--card); border-bottom: 1px solid var(--line);
+}
+.topbar h1 { margin: 0; font-size: 17px; font-weight: 700; }
+.topbar .right { display: flex; align-items: center; gap: 2px; }
+.icon-btn { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 8px; color: var(--muted); }
+.icon-btn:active { background: var(--deep); }
+.link { color: var(--accent); font-weight: 600; padding: 8px; }
+
+.content {
+  flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  padding: 12px 16px 20px; display: flex; flex-direction: column; gap: 12px;
+}
+.content > * { flex: none; }
+.fab-gap { height: 56px; }
+
+.tabbar {
+  flex: none; position: relative; z-index: 6; display: flex; justify-content: center;
+  background: var(--deep); border-top: 1px solid var(--line); padding-bottom: var(--sab);
+}
+.tabbar-in { display: flex; width: 100%; max-width: 640px; }
+.tab { flex: 1; height: var(--tab-h); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--muted); font-size: 10px; position: relative; text-align: center; }
+.tab.active { color: var(--accent); }
+.tab .dot { position: absolute; top: 6px; left: 50%; margin-left: 8px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--warn); color: #000; font-size: 10px; font-weight: 700; display: grid; place-items: center; }
+
+/* ── базові елементи ── */
+.card { background: var(--card); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.card.row { flex-direction: row; align-items: center; }
+.label { font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--muted); }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.err { color: var(--red); font-size: 13px; }
+.ok { color: var(--green); font-size: 13px; }
+.sec-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: -4px; }
+.section { display: flex; flex-direction: column; gap: 8px; }
+.sep { height: 1px; background: var(--line); border: 0; margin: 2px 0; }
+
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 11px 14px;
+  border-radius: 6px; background: var(--accent); color: #fff; font-size: 15px; font-weight: 600; text-align: center;
+}
+.btn:active { opacity: .8; }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn.green { background: var(--green); }
+.btn.red { background: var(--red); }
+.btn.deep { background: var(--deep); color: var(--text); }
+.btn-row { display: flex; gap: 8px; }
+.btn-row .btn { flex: 1; }
+.btn.big { padding: 15px 14px; font-size: 17px; }
+
+.badge { display: inline-block; padding: 3px 8px; border-radius: 99px; font-size: 11px; font-weight: 700; background: rgba(35,165,89,.22); color: var(--green); white-space: nowrap; }
+.badge.warn { background: rgba(240,178,50,.22); color: var(--warn); }
+.badge.red { background: rgba(242,63,67,.22); color: var(--red); }
+.badge.accent { background: rgba(88,101,242,.25); color: #aab1ff; }
+
+.avatar { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 18px; flex: none; }
+
+.field { width: 100%; padding: 10px; background: var(--deep); border: 1px solid transparent; border-radius: 6px; font-size: 16px; outline: none; }
+.field:focus { border-color: var(--accent); }
+textarea.field { min-height: 96px; resize: vertical; }
+select.field { appearance: none; -webkit-appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 32px; }
+.form { display: flex; flex-direction: column; gap: 14px; }
+.form label { display: flex; flex-direction: column; gap: 6px; }
+
+/* ── пари ── */
+.lesson { display: flex; align-items: center; gap: 12px; padding: 12px; width: 100%; background: var(--card); border-radius: 8px; }
+.lesson.dim { opacity: .5; }
+.lesson .lt { width: 48px; text-align: center; font-family: ui-monospace, "SF Mono", Menlo, monospace; display: flex; flex-direction: column; gap: 2px; flex: none; }
+.lesson .lt b { font-size: 15px; font-weight: 600; }
+.lesson .lt span { font-size: 12px; color: var(--muted); }
+.lesson .bar { width: 3px; height: 40px; border-radius: 3px; flex: none; }
+.lesson .lm { flex: 1; min-width: 0; }
+.lesson .ln { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lesson .ls { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.next-title { font-size: 18px; font-weight: 700; }
+.status { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 15px; font-weight: 600; }
+.status.now { color: var(--green); }
+.status.soon { color: var(--warn); }
+.hstack { display: flex; align-items: center; gap: 12px; }
+
+/* ── тиждень ── */
+.weekbar { display: flex; align-items: center; justify-content: space-between; }
+.weekbar b { font-size: 15px; }
+.chips { display: flex; gap: 6px; }
+.chip { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0; border-radius: 8px; background: var(--card); color: var(--muted); text-align: center; }
+.chip small { font-size: 11px; font-weight: 700; }
+.chip strong { font-size: 17px; font-weight: 700; }
+.chip i { width: 5px; height: 5px; border-radius: 50%; background: transparent; }
+.chip.has i { background: var(--accent); }
+.chip.sel { background: var(--accent); color: #fff; }
+.chip.sel.has i { background: #fff; }
+
+/* ── домашнє ── */
+.hw { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); align-items: flex-start; }
+.hw .chk { width: 26px; height: 26px; flex: none; color: var(--muted); }
+.hw .chk.on { color: var(--green); }
+.hw .chk.st { cursor: default; }
+.hw .body { flex: 1; min-width: 0; text-align: left; display: flex; flex-direction: column; gap: 3px; }
+.hw .subj { font-size: 12px; font-weight: 700; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.hw .txt { white-space: pre-wrap; word-break: break-word; }
+.hw .txt.done { color: var(--muted); text-decoration: line-through; }
+.hw-sec { display: flex; flex-direction: column; }
+.hw-sec > .label { padding: 4px 0; }
+.fab { position: absolute; right: 16px; bottom: calc(var(--tab-h) + var(--sab) + 16px); width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; box-shadow: 0 4px 14px rgba(0,0,0,.45); z-index: 4; }
+
+/* ── налаштування ── */
+.list { background: var(--card); border-radius: 8px; overflow: hidden; }
+.list > * { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.list > *:last-child { border-bottom: 0; }
+.list .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; }
+.list button.row:active { background: var(--deep); }
+.toggle { position: relative; width: 50px; height: 30px; flex: none; }
+.toggle input { opacity: 0; position: absolute; inset: 0; margin: 0; width: 100%; height: 100%; cursor: pointer; z-index: 1; }
+.toggle span { position: absolute; inset: 0; border-radius: 99px; background: var(--deep); transition: background .15s; }
+.toggle span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.toggle input:checked + span { background: var(--green); }
+.toggle input:checked + span::after { transform: translateX(20px); }
+.stepper { display: flex; align-items: center; gap: 4px; }
+.stepper button { width: 34px; height: 34px; border-radius: 6px; background: var(--deep); display: grid; place-items: center; font-size: 20px; text-align: center; }
+.stepper b { min-width: 24px; text-align: center; }
+.foot { font-size: 13px; color: var(--muted); padding: 6px 4px 0; }
+.hint { border: 1px solid var(--line); }
+.hint b { color: var(--warn); }
+
+/* ── вхід ── */
+.login { flex: 1; min-height: 0; overflow-y: auto; padding: calc(var(--sat) + 48px) 20px calc(var(--sab) + 32px); display: flex; flex-direction: column; gap: 20px; align-items: stretch; text-align: center; }
+.login .logo { width: 84px; height: 84px; border-radius: 20px; margin: 0 auto; }
+.login h1 { margin: 0; font-size: 24px; }
+.login .card { text-align: left; }
+
+/* ── модальні вікна ── */
+.overlay { position: fixed; top: 0; left: 0; right: 0; height: var(--app-h, 100%); z-index: 20; background: rgba(0,0,0,.55); display: flex; justify-content: center; align-items: flex-end; animation: fade .15s ease-out; }
+.sheet { width: 100%; max-width: 640px; height: 100%; max-height: 100%; background: var(--bg); display: flex; flex-direction: column; animation: rise .2s ease-out; }
+@media (min-width: 700px) { .sheet { height: calc(100% - 48px); border-radius: 14px 14px 0 0; } }
+.sh-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: var(--sat) 8px 0 8px; min-height: calc(48px + var(--sat)); background: var(--card); border-bottom: 1px solid var(--line); flex: none; }
+.sh-head h2 { margin: 0; font-size: 17px; font-weight: 700; flex: 1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sh-head .side { min-width: 84px; }
+.sh-head .side.r { text-align: right; }
+.sh-body { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 12px 16px calc(var(--sab) + 24px); display: flex; flex-direction: column; gap: 12px; flex: 1; }
+@keyframes fade { from { opacity: 0; } }
+@keyframes rise { from { transform: translateY(24px); opacity: .6; } }
+
+.info { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.info span:first-child { color: var(--muted); }
+.info span:last-child { text-align: right; }
+
+.banner { position: fixed; top: calc(var(--sat) + 8px); left: 50%; transform: translateX(-50%); z-index: 40; background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 8px 14px; font-size: 13px; max-width: calc(100% - 24px); text-align: center; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
+.toast { position: fixed; left: 50%; top: calc(var(--app-h, 100dvh) - var(--tab-h) - var(--sab) - 64px); transform: translateX(-50%); z-index: 50; background: var(--text); color: #111; padding: 10px 16px; border-radius: 10px; font-size: 14px; max-width: calc(100% - 32px); box-shadow: 0 4px 14px rgba(0,0,0,.4); }
+
+.spin { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.refreshing svg { animation: spin .8s linear infinite; }
+
+a.btn { text-decoration: none; }
+input[type="date"].field { min-height: 42px; -webkit-appearance: none; appearance: none; }
+
+/* ── кілька пристроїв ── */
+.dev { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+.dev:first-of-type { border-top: 0; }
+.dev .dn { min-width: 0; font-size: 14px; word-break: break-word; }
+.dev .btn { width: auto; padding: 7px 12px; font-size: 13px; }
+.btn.small { width: auto; padding: 7px 12px; font-size: 13px; }
+.pending-box { border: 1px solid rgba(240,178,50,.5); }
+.info-box { border: 1px solid rgba(240,178,50,.5); background: rgba(240,178,50,.08); border-radius: 8px; padding: 12px; text-align: left; display: flex; gap: 10px; align-items: flex-start; font-size: 14px; }
+.info-box .spin { margin-top: 2px; border-color: rgba(240,178,50,.35); border-top-color: var(--warn); }
+.tab .dot.left { margin-left: 8px; }
+
+/* ── під iPhone із маленьким екраном (SE, 8): компактніша панель ── */
+html[data-device="320x568"], html[data-device="375x667"] { --tab-h: 52px; }
+html[data-device="320x568"] .tab, html[data-device="375x667"] .tab { font-size: 9.5px; }
+@media (max-width: 340px) { .tab { font-size: 9px; } .content { padding-left: 12px; padding-right: 12px; } }
+
+/* ── запит дозволу на сповіщення ── */
+.push-ask { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.6); display: flex; align-items: flex-end; justify-content: center; padding: 16px 16px calc(var(--sab) + 16px); }
+.push-ask-card { width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 24px 20px 12px; text-align: center; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+.push-ask-card h2 { margin: 0; font-size: 20px; }
+.push-ask-card p { margin: 0; font-size: 14px; line-height: 1.4; }
+.push-ask-ico { font-size: 40px; line-height: 1; }
+@media (min-width: 600px) { .push-ask { align-items: center; } }
+
+/* ── вкладення до домашнього ── */
+.hw-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.hw-main .body { flex: none; width: 100%; }
+.att { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; min-width: 0; max-width: 100%; }
+.chip-link { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: var(--deep); padding: 6px 12px; border-radius: 99px; font-size: 13px; text-decoration: none; }
+.thumbs { display: flex; flex-wrap: wrap; gap: 8px; }
+.thumb { position: relative; width: 72px; height: 72px; border-radius: 8px; overflow: hidden; background: var(--deep); display: grid; place-items: center; padding: 0; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb .x { position: absolute; top: 3px; right: 3px; width: 22px; height: 22px; border-radius: 50%; background: rgba(0,0,0,.65); color: #fff; font-size: 12px; line-height: 1; display: grid; place-items: center; }
+.att-edit { display: flex; flex-direction: column; gap: 8px; }
+.att-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--deep); border-radius: 6px; padding: 4px 4px 4px 10px; }
+.att-row a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; font-size: 14px; }
+.att-add { display: flex; gap: 8px; }
+.att-add .btn { flex: none; width: auto; padding: 0 16px; }
+.att-pick { cursor: pointer; }
+img.full { width: 100%; height: auto; border-radius: 8px; display: block; }
+img.broken { opacity: .35; }
+
+.thumb-btn { position: absolute; inset: 0; padding: 0; }
+.full-btn { display: block; width: 100%; padding: 0; }
+.full-btn img.full { max-height: 70vh; object-fit: contain; background: var(--deep); }
+
+.hw-item{display:flex;flex-direction:column;gap:6px}
+.hw-item+.hw-item{border-top:1px solid var(--line,rgba(128,128,128,.25));padding-top:10px}

@@ -1,0 +1,15 @@
+{
+  "name": "diary-web",
+  "version": "1.0.0",
+  "description": "Щоденник студента — вебверсія й сервер (Node.js + MongoDB + Web Push)",
+  "main": "server.js",
+  "private": true,
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "mongodb": "^6.8.0",
+    "web-push": "^3.6.7"
+  }
+}
