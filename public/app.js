@@ -24,7 +24,7 @@
 
   const S = {
     token: LS.get('token', null),
-    user: null,
+    user: null, birthdayBanner: null,
     lessons: [], homework: [], subjects: {}, teachers: {}, scheduleTitle: '',
     settings: Object.assign({}, DEFAULT_SETTINGS, LS.get('settings', {})),
     answered: new Set(LS.get('answered', [])),
@@ -129,28 +129,13 @@
 
   // ───────────── дані ─────────────
 
-  const ROLE_NOTICE = {
-    starosta: 'Вас призначено старостою. Тепер ви можете завантажувати розклад і підтверджувати домашнє.',
-    deputy: 'Вас призначено заступником старости. Тепер ви можете завантажувати розклад і підтверджувати домашнє.',
-    '': 'Вашу роль знято — ви знову студент.',
-  };
-
-  function applySync(r, fromCache) {
-    const prevRole = S.user ? (S.user.isAdmin ? 'admin' : S.user.role || '') : null;
+  function applySync(r) {
     S.user = r.user;
-    if (!fromCache) {
-      // Роль змінилась (адміністратор призначив або зняв) — показуємо повідомлення й запам'ятовуємо останню відому.
-      const nowRole = r.user.isAdmin ? 'admin' : r.user.role || '';
-      const known = LS.get('knownRole:' + r.user.id, prevRole);
-      if (known !== null && known !== nowRole && nowRole !== 'admin') {
-        setTimeout(() => toast(ROLE_NOTICE[nowRole] || ROLE_NOTICE['']), 300);
-      }
-      LS.set('knownRole:' + r.user.id, nowRole);
-    }
     S.lessons = (r.lessons || []).map((l) => Object.assign({}, l, { start: new Date(l.start), end: new Date(l.end) }));
     S.subjects = r.subjects || {};
     S.teachers = r.teachers || {};
     S.scheduleTitle = r.scheduleTitle || '';
+    S.birthdayBanner = r.birthdayBanner || null;
     S.deviceRequests = r.deviceRequests || 0;
     S.noHw = new Set(r.noHomework || []);
     if (Array.isArray(r.answered)) {
@@ -196,9 +181,10 @@
     LS.del('cache'); LS.set('answered', []); LS.set('done', []);
   }
 
-  async function login(fullName, password) {
+  async function login(fullName, password, group) {
+    const groupName = group || ($('#groupName') && $('#groupName').value.trim()) || (S.user && S.user.group) || '';
     const r = await api('POST', '/api/auth/login', {
-      fullName, deviceId, password: password || undefined,
+      fullName, group: groupName, deviceId, password: password || undefined,
       deviceLabel: window.DeviceInfo ? DeviceInfo.label() : undefined,
     });
     stopPending();
@@ -348,21 +334,6 @@
   const newHomework = (l) => ({ id: null, subjectKey: l.subjectKey, lessonID: l.id, text: '', due: dueDateAfter(l) });
   const blankHomework = () => ({ id: null, subjectKey: subjectKeys()[0] || '', lessonID: null, text: '', due: sod(addDays(new Date(), 1)) });
 
-  /**
-   * Домашнє, що стосується конкретної пари:
-   *  given — задали саме на цій парі (прив'язане до неї або внесене з цього предмета в день пари);
-   *  due   — треба здати на цю пару (термін збігається з днем пари).
-   */
-  function lessonHomework(l) {
-    const all = S.homework.filter((h) => h.status === 'approved' || h.authorID === (S.user && S.user.id));
-    const given = all.filter((h) => h.lessonID === l.id || (!h.lessonID && h.subjectKey === l.subjectKey && sameDay(h.created, l.start)))
-      .sort((a, b) => a.created - b.created);
-    const ids = new Set(given.map((h) => h.id));
-    const due = all.filter((h) => !ids.has(h.id) && h.subjectKey === l.subjectKey && sameDay(h.due, l.start))
-      .sort((a, b) => a.created - b.created);
-    return { given, due };
-  }
-
   const hwDone = (h) => S.done.has(h.id);
   const listedHomework = () => S.homework.filter((h) => h.status === 'approved' || h.authorID === (S.user && S.user.id));
   const moderationQueue = () => (isMod() ? S.homework.filter((h) => h.status === 'pending').sort((a, b) => a.created - b.created) : []);
@@ -411,14 +382,11 @@
     const now = new Date();
     const ongoing = l.start <= now && now < l.end;
     const finished = l.end <= now;
-    const lh = lessonHomework(l);
-    const hwCount = lh.given.length + lh.due.length;
     return `<button class="lesson ${finished ? 'dim' : ''}" data-act="lesson" data-id="${esc(l.id)}">
       <div class="lt"><b>${hm(l.start)}</b><span>${hm(l.end)}</span></div>
       <i class="bar" style="background:${subjColor(l.subjectKey)}"></i>
       <div class="lm"><div class="ln">${esc(subjName(l.subjectKey))}</div>
         <div class="ls">${l.pair} пара · ${esc(kindTitle(l))} · ${esc(placeTitle(l))}</div></div>
-      ${hwCount ? badge('ДЗ ' + hwCount, 'warn') : ''}
       ${ongoing ? badge('ЗАРАЗ') : l.isRemote ? `<span class="muted">${ic('video', 20)}</span>` : ''}
     </button>`;
   }
@@ -708,13 +676,14 @@
       <button class="row" data-act="sync"><span>Оновити дані</span></button>
       <button class="row" data-act="share"><span>Поділитися посиланням на щоденник</span></button>
       <button class="row" data-act="logout"><span style="color:var(--red)">Вийти</span></button>
-    </div>${!isMod() ? '<div class="foot">Посилання на пари й імена викладачів налаштовують адміністратор і староста.</div>' : ''}</div>`;
+    </div>${!isAdmin() ? '<div class="foot">Посилання на пари й імена викладачів налаштовує адміністратор.</div>' : ''}</div>`;
 
     if (isMod()) {
       h += `<div><div class="label" style="margin:0 0 6px 4px">Розклад</div><div class="list">
         <div>${S.lessons.length
           ? `${S.scheduleTitle ? `<div>${esc(S.scheduleTitle)}</div>` : ''}<div class="muted small">Пар у розкладі: ${S.lessons.length}${scheduleRange()}</div>`
           : '<span class="muted">Розклад не завантажено</span>'}</div>
+        <label class="row"><span>Група для цього розкладу</span><input class="field" id="schedGroup" value="${esc(S.user.group || '')}" placeholder="Порожньо — спільний розклад"></label>
         <label class="row" style="cursor:pointer"><span style="color:var(--accent);font-weight:600">Завантажити розклад (.xls / .xlsx / .csv)</span>
           <input type="file" id="schedFile" data-chg="schedFile" accept=".xls,.xlsx,.csv,.txt,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" hidden></label>
         <div id="schedMsg" class="${S.schedMsg.cls} small" ${S.schedMsg.text ? '' : 'hidden'}>${esc(S.schedMsg.text)}</div>
@@ -723,9 +692,9 @@
       const q = moderationQueue().length;
       h += `<div><div class="label" style="margin:0 0 6px 4px">Керування</div><div class="list">
         <button class="row" data-act="moderation"><span>Домашнє на підтвердження</span>${q ? badge(String(q), 'warn') : ''}</button>
-        <button class="row" data-act="subjects"><span>Предмети й посилання</span></button>
+        ${isAdmin() ? `<a class="row" href="/admin.html" style="text-decoration:none"><span>Відкрити адмінпанель</span><span>↗</span></a><button class="row" data-act="subjects"><span>Предмети й посилання</span></button>
         <button class="row" data-act="teachers"><span>Викладачі</span></button>
-        ${isAdmin() ? `<button class="row" data-act="users"><span>Учасники, ролі й пристрої</span>${S.deviceRequests ? badge(String(S.deviceRequests), 'warn') : ''}</button>` : ''}
+        <button class="row" data-act="users"><span>Учасники, ролі й пристрої</span>${S.deviceRequests ? badge(String(S.deviceRequests), 'warn') : ''}</button>` : ''}
       </div></div>`;
     }
 
@@ -786,7 +755,7 @@
         ${S.tab === 'schedule' ? '<button class="link" data-act="goToday">Сьогодні</button>' : ''}
         <button class="icon-btn ${S.syncing ? 'refreshing' : ''}" data-act="sync" aria-label="Оновити">${ic('refresh', 20)}</button>
       </div></header>
-      <main class="content">${views[cur.id]()}</main>
+      <main class="content">${S.birthdayBanner ? `<div class="birthday-banner">🎉 ${S.birthdayBanner.mine ? `Вітаємо тебе з днем народження! Тобі виповнилося ${S.birthdayBanner.age} років!` : `Сьогодні у ${esc(S.birthdayBanner.name)} день народження — ${S.birthdayBanner.age} років!`}</div>` : ''}${views[cur.id]()}</main>
       <nav class="tabbar"><div class="tabbar-in">${tabs.map((t) => `
         <button class="tab ${t.id === S.tab ? 'active' : ''}" data-act="tab" data-tab="${t.id}">${ic(t.icon, 22)}<span>${t.title}</span>
           ${t.id === 'homework' && q ? `<span class="dot">${q}</span>` : ''}${t.id === 'settings' && isAdmin() && S.deviceRequests ? `<span class="dot">${S.deviceRequests}</span>` : ''}</button>`).join('')}</div></nav>`;
@@ -803,6 +772,9 @@
         <div class="card" style="gap:12px">
           <span class="label">ПІБ</span>
           <input class="field" id="fullName" name="name" type="text" autocomplete="name" autocapitalize="words" autocorrect="off" spellcheck="false" placeholder="Іваненко Іван Іванович" required>
+          <span class="label">Група</span>
+          <input class="field" id="groupName" name="group" type="text" autocapitalize="characters" placeholder="Наприклад, 101-навчальна група" required>
+          <div class="muted small">Вхід доступний лише за ПІБ і групою, попередньо внесеними адміністратором.</div>
           <div id="passWrap" ${S.needPassword ? '' : 'hidden'} style="display:${S.needPassword ? 'flex' : 'none'};flex-direction:column;gap:12px">
             <span class="label">Пароль адміністратора</span>
             <input class="field" id="adminPass" type="password" autocomplete="current-password" placeholder="Потрібен для нового пристрою">
@@ -889,9 +861,7 @@
     if (!l) return '<div class="muted">Пару не знайдено</div>';
     const url = joinURL(l.subjectKey);
     const color = subjColor(l.subjectKey);
-    const lh = lessonHomework(l);
-    const hwItem = (h) => `<div class="hw-item"><div class="txt" style="white-space:pre-wrap;word-break:break-word">${esc(h.text)}</div>${attHTML(h)}
-          <div class="muted small">До ${dayMonth(h.due)} ${hwBadge(h)}</div></div>`;
+    const items = listedHomework().filter((h) => h.lessonID === l.id);
     return `
       ${card(`
         <div class="hstack"><div class="avatar" style="background:${color}38;color:${color}">${esc(l.subjectKey.charAt(0).toUpperCase())}</div>
@@ -903,19 +873,17 @@
         <div class="info"><span>Де</span><span>${esc(placeTitle(l))}</span></div>
         ${l.teacher ? `<div class="info"><span>Викладач</span><span>${esc(teacherName(l.teacher))}</span></div>` : ''}`)}
       ${url ? `<a class="btn green big" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${ic('video', 20)} Приєднатися до пари</a>` : ''}
-      ${isMod() ? card(`
+      ${isAdmin() ? card(`
         <span class="label">Посилання на пару</span>
         <input class="field" name="link" type="url" inputmode="url" autocapitalize="none" autocorrect="off" placeholder="https://zoom.us/j/… або Meet / Teams" value="${esc((S.subjects[l.subjectKey] && S.subjects[l.subjectKey].link) || '')}">
         <div class="muted small">Посилання діє для всього предмета й одразу з’являється в усіх студентів.</div>
         <div class="muted small" data-role="msg"></div>
         <button class="btn deep" data-act="saveLink" data-key="${esc(l.subjectKey)}">Зберегти посилання</button>`) : ''}
       ${card(`
-        <span class="label">Домашнє на пару · ${dayMonth(l.start)}</span>
-        ${lh.given.length ? lh.given.map(hwItem).join('') : '<div class="muted">На цій парі нічого не записано</div>'}
-        <button class="btn" data-act="hwNew" data-lesson="${esc(l.id)}">${isMod() ? 'Записати домашнє' : 'Запропонувати домашнє'}</button>`)}
-      ${lh.due.length ? card(`
-        <span class="label">Потрібно здати на цю пару</span>
-        ${lh.due.map(hwItem).join('')}`) : ''}`;
+        <span class="label">Домашнє на цю пару</span>
+        ${items.length ? items.map((h) => `<div><div class="txt" style="white-space:pre-wrap">${esc(h.text)}</div>${attHTML(h)}
+          <div class="muted small">До ${dayMonth(h.due)} ${hwBadge(h)}</div></div>`).join('') : '<div class="muted">Нічого не записано</div>'}
+        <button class="btn" data-act="hwNew" data-lesson="${esc(l.id)}">${isMod() ? 'Записати домашнє' : 'Запропонувати домашнє'}</button>`)}`;
   }
 
   function openHomeworkView(h0) {
@@ -1265,7 +1233,8 @@
       say('Читаю файл…');
       const parsed = ScheduleParser.parse(await readGrid(file));
       say(`Відправляю пар: ${parsed.lessons.length}…`);
-      await api('PUT', '/api/schedule', { title: parsed.title, lessons: parsed.lessons });
+      const group = ($('#schedGroup') && $('#schedGroup').value.trim()) || '';
+      await api('PUT', '/api/schedule', { title: parsed.title, group, lessons: parsed.lessons });
       await sync();
       say(`Готово. Додано пар: ${parsed.lessons.length}`, 'ok');
     } catch (e) {
@@ -1584,14 +1553,16 @@
     const err = $('#loginErr');
     const btn = $('#loginBtn');
     const name = $('#fullName').value.replace(/\s+/g, ' ').trim();
+    const groupName = $('#groupName') ? $('#groupName').value.trim() : '';
     err.textContent = '';
     if (name.split(' ').length < 2) { err.textContent = 'Введіть прізвище, ім’я та по батькові.'; return; }
+    if (!groupName) { err.textContent = 'Введіть навчальну групу.'; return; }
     btn.disabled = true;
     btn.innerHTML = '<span class="spin"></span>';
     try {
       loginNotice = '';
       stopPending();
-      await login(name, $('#adminPass') ? $('#adminPass').value : '');
+      await login(name, $('#adminPass') ? $('#adminPass').value : '', groupName);
     } catch (ex) {
       if (!S.user) {
         if (ex.code === 'password_required') {
@@ -1640,17 +1611,13 @@
   function boot() {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
-      navigator.serviceWorker.addEventListener('message', (e) => {
-        if (!e.data) return;
-        if (e.data.type === 'route') routeFromUrl(e.data.url);
-        else if (e.data.type === 'sync' && S.user) sync();
-      });
+      navigator.serviceWorker.addEventListener('message', (e) => { if (e.data && e.data.type === 'route') routeFromUrl(e.data.url); });
     }
     if (location.search) S.pendingRoute = location.search;
 
     if (S.token) {
       const cached = LS.get('cache', null);
-      if (cached) { try { applySync(cached, true); } catch (e) { /* зіпсований кеш */ } }
+      if (cached) { try { applySync(cached); } catch (e) { /* зіпсований кеш */ } }
     }
     render();
     refreshPushState();

@@ -244,5 +244,5 @@ img.broken { opacity: .35; }
 .full-btn { display: block; width: 100%; padding: 0; }
 .full-btn img.full { max-height: 70vh; object-fit: contain; background: var(--deep); }
 
-.hw-item{display:flex;flex-direction:column;gap:6px}
-.hw-item+.hw-item{border-top:1px solid var(--line,rgba(128,128,128,.25));padding-top:10px}
+.birthday-banner{margin:12px 14px 0;padding:14px 16px;border-radius:16px;background:linear-gradient(120deg,#fff0bd,#ffd8e6);color:#532d43;font-weight:700;line-height:1.4;box-shadow:0 5px 18px #0000000d}
+@media(min-width:760px){.birthday-banner{margin:18px auto 0;max-width:980px}}

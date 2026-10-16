@@ -102,7 +102,7 @@ const placeTitle = (l) => (l.isRemote ? 'Дистанційно' : l.room ? 'а�
 
 // ───────────────────────── База даних ─────────────────────────
 
-let db, users, lessons, subjects, teachers, homework, pushSubs, sent, config, noHw, answers, hwImages;
+let db, users, lessons, subjects, teachers, homework, pushSubs, sent, config, noHw, answers, hwImages, roster, groups;
 let SECRET;
 let VAPID_KEY_ID = '';
 
@@ -133,9 +133,13 @@ async function initDb() {
   config = db.collection('config');
   answers = db.collection('answers'); // кому з користувачів уже відповів на «Що задали?» (діє на всіх його пристроях)
   hwImages = db.collection('hwImages'); // зображення, прикріплені до домашнього
+  roster = db.collection('roster'); // allowlist студентів, яку керує адміністратор
+  groups = db.collection('groups');
   noHw = db.collection('noHomework'); // пари, на які адміністратор сказав «нічого не задали»
 
   await users.createIndex({ nameKey: 1 }, { unique: true });
+  await roster.createIndex({ nameKey: 1 }, { unique: true });
+  await groups.createIndex({ nameKey: 1 }, { unique: true });
   await lessons.createIndex({ start: 1 });
   await lessons.createIndex({ end: 1 });
   await homework.createIndex({ due: 1 });
@@ -198,7 +202,7 @@ setInterval(() => attempts.clear(), 60 * 60 * 1000).unref();
 const ROLES = { starosta: 'Староста', deputy: 'Заступник старости' };
 /** Адміністратор, староста або заступник старости: підтверджують домашнє й завантажують розклад. */
 const isMod = (u) => !!(u && (u.isAdmin || ROLES[u.role]));
-const pubUser = (u) => ({ id: u._id, fullName: u.fullName, isAdmin: !!u.isAdmin, role: ROLES[u.role] ? u.role : '', canModerate: isMod(u) });
+const pubUser = (u) => ({ id: u._id, fullName: u.fullName, group: u.group || '', isAdmin: !!u.isAdmin, role: ROLES[u.role] ? u.role : '', canModerate: isMod(u) });
 const pubLesson = (l) => ({
   id: l._id, pair: l.pair, start: l.start, end: l.end, subjectKey: l.subjectKey,
   kind: l.kind, topic: l.topic, room: l.room, teacher: l.teacher, isRemote: !!l.isRemote,
@@ -292,6 +296,7 @@ async function tick() {
   ticking = true;
   try {
     const now = Date.now();
+    await notifyBirthdays();
     const subs = await pushSubs.find({ 'settings.notificationsEnabled': true }).toArray();
     if (!subs.length) return;
     const starting = await lessons.find({ start: { $gt: new Date(now), $lte: new Date(now + 16 * 60000) } }).toArray();
@@ -359,34 +364,6 @@ async function notifyPending(hw) {
     await Promise.allSettled(subs.map((s) => sendPush(s, payload)));
   } catch (e) {
     console.error('notifyPending:', e);
-  }
-}
-
-/** Людині, якій адміністратор змінив роль: сповіщення на всі її пристрої (незалежно від налаштувань нагадувань). */
-async function notifyRole(target, role) {
-  try {
-    const subs = await pushSubs.find({ userId: target._id }).toArray();
-    if (!subs.length) return 0;
-    const payload = role
-      ? {
-        title: 'Вас призначено на роль',
-        body: `Ви успішно призначені: ${ROLES[role]}. Тепер вам доступні розклад, підтвердження домашнього, предмети й викладачі.`,
-        tag: 'role-' + target._id,
-        data: { url: '/?tab=settings' },
-        ttl: 86400,
-      }
-      : {
-        title: 'Роль змінено',
-        body: 'Ваша роль у щоденнику знята — ви знову студент.',
-        tag: 'role-' + target._id,
-        data: { url: '/?tab=settings' },
-        ttl: 86400,
-      };
-    const results = await Promise.all(subs.map((s) => sendPush(s, payload)));
-    return results.filter((r) => r.ok).length;
-  } catch (e) {
-    console.error('notifyRole:', e);
-    return 0;
   }
 }
 
@@ -458,20 +435,25 @@ let VAPID_PUBLIC = '';
 route('POST', '/api/auth/login', async ({ body, ip, req }) => {
   rateLimit(ip);
   const fullName = normName(body.fullName);
+  const groupName = normName(body.group);
   const deviceId = str(body.deviceId, 100);
   if (fullName.length > 100 || fullName.split(' ').length < 2) {
     throw new HttpError(400, 'Введіть прізвище, ім’я та по батькові.');
   }
   if (!deviceId) throw new HttpError(400, 'Не вказано ідентифікатор пристрою.');
+  if (!groupName) throw new HttpError(400, 'Виберіть групу.');
   const nameKey = normKey(fullName);
-  const adminByName = ADMIN_NAMES.has(nameKey);
-
+  const groupKey = normKey(groupName);
+  const adminByName = ADMIN_NAMES.has(nameKey) || (ADMIN_NAMES.size === 0 && (await users.countDocuments({})) === 0);
   const label = devLabel(body, req);
+  const allowed = await roster.findOne({ nameKey, groupKey });
+  const knownGroup = await groups.findOne({ nameKey: groupKey, active: { $ne: false } });
+  if (!adminByName && (!knownGroup || !allowed)) throw new HttpError(403, 'ПІБ або група не знайдені в затвердженому списку. Зверніться до адміністратора.');
   let user = await users.findOne({ nameKey });
   if (!user) {
     const isAdmin = adminByName || (ADMIN_NAMES.size === 0 && (await users.countDocuments({})) === 0);
     user = {
-      _id: crypto.randomUUID(), fullName, nameKey, isAdmin, deviceIds: [deviceId],
+      _id: crypto.randomUUID(), fullName, nameKey, group: groupName, groupKey, isAdmin, deviceIds: [deviceId],
       deviceMeta: { [devKey(deviceId)]: { label, addedAt: new Date() } }, pendingDevices: [], createdAt: new Date(),
     };
     try {
@@ -481,6 +463,9 @@ route('POST', '/api/auth/login', async ({ body, ip, req }) => {
       throw e;
     }
   } else {
+    if (!adminByName && user.groupKey && user.groupKey !== groupKey) throw new HttpError(403, 'Цей ПІБ не прив’язаний до вказаної групи.');
+    if (user.groupKey !== groupKey) await users.updateOne({ _id: user._id }, { $set: { group: groupName, groupKey } });
+    user.group = groupName; user.groupKey = groupKey;
     if (adminByName && !user.isAdmin) {
       user.isAdmin = true;
       await users.updateOne({ _id: user._id }, { $set: { isAdmin: true } });
@@ -531,7 +516,7 @@ route('POST', '/api/auth/device-status', async ({ body, ip }) => {
 route('GET', '/api/sync', async ({ user }) => {
   const since = new Date(Date.now() - 60 * 24 * 3600 * 1000);
   const [ls, subs, tchs, hws, title, reqUsers, noHws, myAnswers] = await Promise.all([
-    lessons.find({}).sort({ start: 1 }).toArray(),
+    lessons.find({ $or: [{ groupKey: { $exists: false } }, { groupKey: '' }, { groupKey: user.groupKey || '' }] }).sort({ start: 1 }).toArray(),
     subjects.find({}).toArray(),
     teachers.find({}).toArray(),
     homework.find({ due: { $gte: since } }).sort({ due: 1 }).toArray(),
@@ -555,6 +540,8 @@ route('GET', '/api/sync', async ({ user }) => {
     subjects: subjectMap,
     teachers: teacherMap,
     homework: visible.map(pubHw),
+    group: user.group || '',
+    birthdayBanner: await birthdayBannerFor(user),
   };
 });
 
@@ -572,14 +559,16 @@ route('PUT', '/api/schedule', async ({ body }) => {
     byId.set(id, {
       _id: id, pair: clampInt(raw.pair, 0, 30, 0), start, end, subjectKey,
       kind: str(raw.kind, 20), topic: str(raw.topic, 80), room: str(raw.room, 60),
-      teacher: str(raw.teacher, 200), isRemote: !!raw.isRemote,
+      teacher: str(raw.teacher, 200), isRemote: !!raw.isRemote, groupKey: normKey(body.group || ''), group: str(body.group, 100),
     });
   }
   const docs = [...byId.values()];
   if (!docs.length) throw new HttpError(400, 'У розкладі немає жодної пари.');
   const minStart = new Date(Math.min(...docs.map((d) => d.start.getTime())));
   // Новий файл замінює пари від його першої дати; домашнє й посилання лишаються.
-  await lessons.deleteMany({ start: { $gte: minStart } });
+  const groupKey = normKey(body.group || '');
+  const scope = groupKey ? { groupKey } : { $or: [{ groupKey: { $exists: false } }, { groupKey: '' }] };
+  await lessons.deleteMany({ ...scope, start: { $gte: minStart } });
   await lessons.deleteMany({ _id: { $in: docs.map((d) => d._id) } });
   await lessons.insertMany(docs);
   await config.updateOne({ _id: 'scheduleTitle' }, { $set: { value: str(body.title, 300) } }, { upsert: true });
@@ -610,20 +599,20 @@ route('POST', '/api/lessons/:id/no-homework', async ({ params }) => {
   return ok();
 }, { mod: true });
 
-// — предмети й викладачі (адмін, староста, заступник)
+// — предмети й викладачі (адмін)
 route('PUT', '/api/subjects', async ({ body }) => {
   const key = str(body.key, 100);
   if (!key) throw new HttpError(400, 'Не вказано предмет.');
   await subjects.updateOne({ _id: key }, { $set: { fullName: str(body.fullName, 200), link: cleanLink(body.link) } }, { upsert: true });
   return ok();
-}, { mod: true });
+}, { admin: true });
 
 route('PUT', '/api/teachers', async ({ body }) => {
   const key = str(body.key, 200);
   if (!key) throw new HttpError(400, 'Не вказано викладача.');
   await teachers.updateOne({ _id: key }, { $set: { fullName: str(body.fullName, 200) } }, { upsert: true });
   return ok();
-}, { mod: true });
+}, { admin: true });
 
 // — домашнє
 const MAX_LINKS = 5;
@@ -812,6 +801,79 @@ route('POST', '/api/push/test', async ({ body, user }) => {
   return ok();
 });
 
+// — довідники груп, списку доступу та днів народження
+function ageOn(dateValue, now = new Date()) {
+  const d = new Date(dateValue);
+  let age = now.getFullYear() - d.getFullYear();
+  if (now.getMonth() < d.getMonth() || (now.getMonth() === d.getMonth() && now.getDate() < d.getDate())) age--;
+  return age;
+}
+function isBirthday(dateValue, now = new Date()) {
+  const d = new Date(dateValue);
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: APP_TZ, month: '2-digit', day: '2-digit' }).formatToParts(now);
+  const month = Number(parts.find(x => x.type === 'month').value), day = Number(parts.find(x => x.type === 'day').value);
+  return d.getUTCMonth() + 1 === month && d.getUTCDate() === day;
+}
+async function birthdayBannerFor(user) {
+  const today = new Date();
+  const own = await roster.findOne({ nameKey: user.nameKey, groupKey: user.groupKey || '' });
+  if (own && own.birthday && isBirthday(own.birthday, today)) return { type: 'mine', name: user.fullName, age: ageOn(own.birthday, today), mine: true };
+  const celebrant = (await roster.find({ birthday: { $exists: true, $ne: '' } }).toArray()).find(x => isBirthday(x.birthday, today));
+  return celebrant ? { type: 'today', name: celebrant.fullName, age: ageOn(celebrant.birthday, today), mine: false } : null;
+}
+async function notifyBirthdays() {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: APP_TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+  const stamp = `${parts.find(x=>x.type==='year').value}-${parts.find(x=>x.type==='month').value}-${parts.find(x=>x.type==='day').value}`;
+  const people = await roster.find({ birthday: { $exists: true, $ne: '' } }).toArray();
+  const todays = people.filter(p => isBirthday(p.birthday));
+  for (const person of todays) {
+    if (!(await claim(`birthday|${stamp}|${person.nameKey}`))) continue;
+    const age = ageOn(person.birthday);
+    const groupUsers = await users.find({}).toArray();
+    const ids = new Set(groupUsers.map(u => u._id));
+    const subs = (await pushSubs.find({}).toArray()).filter(sb => ids.has(sb.userId));
+    const payload = { title: 'День народження 🎉', body: `Сьогодні у ${person.fullName} день народження — ${age} років!`, tag: `birthday-${stamp}-${person.nameKey}`, data: { url: '/' }, ttl: 86400 };
+    await Promise.allSettled(subs.map(sb => sendPush(sb, payload)));
+  }
+}
+route('GET', '/api/public/groups', async () => (await groups.find({ active: { $ne: false } }).sort({ name: 1 }).toArray()).map(g => ({ id: g._id, name: g.name })), { auth: false });
+route('GET', '/api/admin/groups', async () => (await groups.find({}).sort({ name: 1 }).toArray()).map(g => ({ id: g._id, name: g.name, active: g.active !== false })), { admin: true });
+route('POST', '/api/admin/groups', async ({ body }) => {
+  const name = str(body.name, 100), nameKey = normKey(name);
+  if (!name) throw new HttpError(400, 'Введіть назву групи.');
+  if (await groups.findOne({ nameKey })) throw new HttpError(409, 'Така група вже існує.');
+  const doc = { _id: crypto.randomUUID(), name, nameKey, active: true, createdAt: new Date() };
+  await groups.insertOne(doc); return { id: doc._id, name: doc.name, active: true };
+}, { admin: true });
+route('DELETE', '/api/admin/groups/:id', async ({ params }) => { await groups.updateOne({ _id: params.id }, { $set: { active: false } }); return ok(); }, { admin: true });
+route('GET', '/api/admin/roster', async () => (await roster.find({}).sort({ group: 1, fullName: 1 }).toArray()).map(x => ({ id: x._id, fullName: x.fullName, group: x.group, birthday: x.birthday || '' })), { admin: true });
+route('POST', '/api/admin/roster', async ({ body }) => {
+  const fullName = normName(body.fullName), group = normName(body.group), birthday = str(body.birthday, 10);
+  if (fullName.split(' ').length < 2 || !group) throw new HttpError(400, 'Вкажіть повне ПІБ і групу.');
+  if (birthday && !/^\d{4}-\d{2}-\d{2}$/.test(birthday)) throw new HttpError(400, 'Дата народження має бути у форматі РРРР-ММ-ДД.');
+  const groupKey = normKey(group), nameKey = normKey(fullName);
+  if (!(await groups.findOne({ nameKey: groupKey, active: { $ne: false } }))) throw new HttpError(400, 'Спочатку створіть цю групу.');
+  const doc = { fullName, nameKey, group, groupKey, birthday };
+  try { await roster.updateOne({ nameKey, groupKey }, { $set: doc, $setOnInsert: { _id: crypto.randomUUID() } }, { upsert: true }); }
+  catch (e) { if (e.code === 11000) throw new HttpError(409, 'Цей студент уже є у списку.'); throw e; }
+  await users.updateOne({ nameKey }, { $set: { fullName, group, groupKey } });
+  return { ok: true };
+}, { admin: true });
+route('DELETE', '/api/admin/roster/:id', async ({ params }) => { await roster.deleteOne({ _id: params.id }); return ok(); }, { admin: true });
+route('POST', '/api/admin/roster/import', async ({ body }) => {
+  if (!Array.isArray(body.rows) || body.rows.length > 5000) throw new HttpError(400, 'Некоректний файл або забагато рядків.');
+  let imported = 0, skipped = 0;
+  for (const row of body.rows) {
+    const fullName = normName(row.fullName), group = normName(row.group), birthday = str(row.birthday, 10);
+    if (fullName.split(' ').length < 2 || !group || (birthday && !/^\d{4}-\d{2}-\d{2}$/.test(birthday))) { skipped++; continue; }
+    const groupKey = normKey(group), nameKey = normKey(fullName);
+    if (!(await groups.findOne({ nameKey: groupKey, active: { $ne: false } }))) { skipped++; continue; }
+    await roster.updateOne({ nameKey, groupKey }, { $set: { fullName, nameKey, group, groupKey, birthday }, $setOnInsert: { _id: crypto.randomUUID() } }, { upsert: true });
+    await users.updateOne({ nameKey }, { $set: { fullName, group, groupKey } }); imported++;
+  }
+  return { imported, skipped };
+}, { admin: true });
+
 // — учасники (адмін)
 route('GET', '/api/admin/users', async () => {
   const list = await users.find({}).sort({ fullName: 1 }).toArray();
@@ -902,11 +964,8 @@ route('POST', '/api/admin/users/:id/role', async ({ params, body }) => {
   const target = await users.findOne({ _id: params.id });
   if (!target) throw new HttpError(404, 'Користувача не знайдено.');
   if (target.isAdmin) throw new HttpError(400, 'Адміністратору роль не потрібна.');
-  const prev = ROLES[target.role] ? target.role : '';
   await users.updateOne({ _id: target._id }, role ? { $set: { role } } : { $unset: { role: '' } });
-  // Сповіщаємо лише якщо роль справді змінилась.
-  const notified = prev !== role ? await notifyRole(target, role) : 0;
-  return { notified };
+  return ok();
 }, { admin: true });
 
 route('DELETE', '/api/admin/users/:id', async ({ params, user }) => {

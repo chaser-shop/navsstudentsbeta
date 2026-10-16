@@ -1,5 +1,5 @@
 /* Service worker: офлайн-оболонка + Web Push сповіщення. */
-const CACHE = 'diary-shell-v8';
+const CACHE = 'diary-shell-v7';
 const SHELL = ['/', '/style.css', '/app.js', '/schedule.js', '/device.js', '/manifest.webmanifest', '/icons/icon-192.png'];
 
 self.addEventListener('install', (e) => {
@@ -33,7 +33,7 @@ self.addEventListener('fetch', (e) => {
 self.addEventListener('push', (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (err) { d = { title: 'Щоденник', body: e.data ? e.data.text() : '' }; }
-  e.waitUntil(Promise.all([
+  e.waitUntil(
     self.registration.showNotification(d.title || 'Щоденник', {
       body: d.body || '',
       tag: d.tag,
@@ -42,11 +42,8 @@ self.addEventListener('push', (e) => {
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-192.png',
       renotify: !!d.tag,
-    }),
-    // Якщо щоденник відкритий — просимо його одразу оновити дані (наприклад, після зміни ролі).
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then((list) => list.forEach((c) => c.postMessage({ type: 'sync' }))),
-  ]));
+    })
+  );
 });
 
 self.addEventListener('notificationclick', (e) => {
