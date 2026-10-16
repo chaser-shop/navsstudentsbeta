@@ -755,7 +755,7 @@
         ${S.tab === 'schedule' ? '<button class="link" data-act="goToday">Сьогодні</button>' : ''}
         <button class="icon-btn ${S.syncing ? 'refreshing' : ''}" data-act="sync" aria-label="Оновити">${ic('refresh', 20)}</button>
       </div></header>
-      <main class="content">${S.birthdayBanner ? `<div class="birthday-banner">🎉 ${S.birthdayBanner.mine ? `Вітаємо тебе з днем народження! Тобі виповнилося ${S.birthdayBanner.age} років!` : `Сьогодні у ${esc(S.birthdayBanner.name)} день народження — ${S.birthdayBanner.age} років!`}</div>` : ''}${views[cur.id]()}</main>
+      <main class="content">${S.birthdayBanner ? `<div class="birthday-banner">🎉 ${S.birthdayBanner.mine ? `Вітаємо тебе з днем народження! Тобі виповнилося ${S.birthdayBanner.age} років!` : `Сьогодні день народження ${esc(S.birthdayBanner.name)}! Виповнилося ${S.birthdayBanner.age} ${S.birthdayBanner.age % 10 === 1 && S.birthdayBanner.age % 100 !== 11 ? 'рік' : ([2,3,4].includes(S.birthdayBanner.age % 10) && !(S.birthdayBanner.age % 100 >= 12 && S.birthdayBanner.age % 100 <= 14) ? 'роки' : 'років')}.`}</div>` : ''}${views[cur.id]()}</main>
       <nav class="tabbar"><div class="tabbar-in">${tabs.map((t) => `
         <button class="tab ${t.id === S.tab ? 'active' : ''}" data-act="tab" data-tab="${t.id}">${ic(t.icon, 22)}<span>${t.title}</span>
           ${t.id === 'homework' && q ? `<span class="dot">${q}</span>` : ''}${t.id === 'settings' && isAdmin() && S.deviceRequests ? `<span class="dot">${S.deviceRequests}</span>` : ''}</button>`).join('')}</div></nav>`;

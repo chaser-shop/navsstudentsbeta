@@ -814,12 +814,68 @@ function isBirthday(dateValue, now = new Date()) {
   const month = Number(parts.find(x => x.type === 'month').value), day = Number(parts.find(x => x.type === 'day').value);
   return d.getUTCMonth() + 1 === month && d.getUTCDate() === day;
 }
+// Перетворення ПІБ із формату «Прізвище Ім'я По батькові» на форму
+// для привітання: «Імені Прізвищу По батькові».
+function dativeGivenName(value) {
+  const w = value;
+  const lower = w.toLocaleLowerCase('uk');
+  const known = {
+    'денис':'денису','олександр':'олександру','андрій':'андрію','сергій':'сергію','євгеній':'євгенію',
+    'іван':'івану','петро':'петрові','павло':'павлу','микола':'миколі','дмитро':'дмитру','максим':'максиму',
+    'артем':'артему','артемій':'артемію','богдан':'богдану','роман':'роману','ярослав':'ярославу','владислав':'владиславу',
+    'дарія':'дарії','дарина':'дарині','марія':'марії','олена':'олені','анна':'анні','анастасія':'анастасії',
+    'ірина':'ірині','катерина':'катерині','софія':'софії','вікторія':'вікторії','наталія':'наталії','юлія':'юлії'
+  };
+  if (known[lower]) return w[0] === w[0].toLocaleUpperCase('uk') ? known[lower][0].toLocaleUpperCase('uk') + known[lower].slice(1) : known[lower];
+  if (/[ая]$/iu.test(w)) return w.slice(0, -1) + (/[я]$/iu.test(w) ? 'і' : 'і');
+  if (/й$/iu.test(w)) return w.slice(0, -1) + 'ю';
+  if (/ь$/iu.test(w)) return w.slice(0, -1) + 'ю';
+  if (/[бвгґджзклмнпрстфхцчшщ]$/iu.test(w)) return w + 'у';
+  return w;
+}
+function dativeSurname(value, givenName) {
+  const w = value, lower = w.toLocaleLowerCase('uk');
+  if (/(енко|ко|их|ых)$/iu.test(w)) return w; // поширені незмінювані прізвища
+  if (/цький$/iu.test(lower)) return w.slice(0, -5) + 'цькому';
+  if (/ський$/iu.test(lower)) return w.slice(0, -5) + 'ському';
+  if (/(ська|цька)$/iu.test(lower)) return w.slice(0, -1) + 'ій';
+  if (/ий$/iu.test(lower)) return w.slice(0, -2) + 'ому';
+  if (/а$/iu.test(lower)) return w.slice(0, -1) + 'і';
+  if (/я$/iu.test(lower)) return w.slice(0, -1) + 'і';
+  if (/ь$/iu.test(lower)) return w.slice(0, -1) + 'ю';
+  if (/[бвгґджзклмнпрстфхцчшщ]$/iu.test(lower)) return w + 'у';
+  return w;
+}
+function dativePatronymic(value) {
+  if (/ович$/iu.test(value)) return value + 'у';
+  if (/евич$/iu.test(value)) return value + 'у';
+  if (/івна$/iu.test(value)) return value.slice(0, -1) + 'і';
+  if (/ївна$/iu.test(value)) return value.slice(0, -1) + 'і';
+  return value;
+}
+function birthdayName(fullName) {
+  const parts = normName(fullName).split(' ').filter(Boolean);
+  if (parts.length < 2) return fullName;
+  // Список у щоденнику записується у звичному для документів порядку: прізвище, ім'я, по батькові.
+  const [surname, given, ...rest] = parts;
+  return [dativeGivenName(given), dativeSurname(surname, given), ...rest.map(dativePatronymic)].join(' ');
+}
+function agePhrase(age) {
+  const n = Math.abs(age) % 100, last = n % 10;
+  if (n >= 11 && n <= 14) return `${age} років`;
+  if (last === 1) return `${age} рік`;
+  if (last >= 2 && last <= 4) return `${age} роки`;
+  return `${age} років`;
+}
 async function birthdayBannerFor(user) {
   const today = new Date();
-  const own = await roster.findOne({ nameKey: user.nameKey, groupKey: user.groupKey || '' });
+  const groupKey = user.groupKey || '';
+  const own = await roster.findOne({ nameKey: user.nameKey, groupKey });
   if (own && own.birthday && isBirthday(own.birthday, today)) return { type: 'mine', name: user.fullName, age: ageOn(own.birthday, today), mine: true };
-  const celebrant = (await roster.find({ birthday: { $exists: true, $ne: '' } }).toArray()).find(x => isBirthday(x.birthday, today));
-  return celebrant ? { type: 'today', name: celebrant.fullName, age: ageOn(celebrant.birthday, today), mine: false } : null;
+  // Показуємо привітання тільки в межах групи поточного користувача.
+  const celebrants = await roster.find({ groupKey, birthday: { $exists: true, $ne: '' } }).toArray();
+  const celebrant = celebrants.find(x => isBirthday(x.birthday, today));
+  return celebrant ? { type: 'today', name: birthdayName(celebrant.fullName), age: ageOn(celebrant.birthday, today), mine: false } : null;
 }
 async function notifyBirthdays() {
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone: APP_TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
@@ -827,12 +883,14 @@ async function notifyBirthdays() {
   const people = await roster.find({ birthday: { $exists: true, $ne: '' } }).toArray();
   const todays = people.filter(p => isBirthday(p.birthday));
   for (const person of todays) {
-    if (!(await claim(`birthday|${stamp}|${person.nameKey}`))) continue;
+    if (!(await claim(`birthday|${stamp}|${person.groupKey || ''}|${person.nameKey}`))) continue;
     const age = ageOn(person.birthday);
-    const groupUsers = await users.find({}).toArray();
-    const ids = new Set(groupUsers.map(u => u._id));
+    // Розсилка всім зареєстрованим користувачам, незалежно від групи.
+    const allUsers = await users.find({}).toArray();
+    const ids = new Set(allUsers.map(u => u._id));
     const subs = (await pushSubs.find({}).toArray()).filter(sb => ids.has(sb.userId));
-    const payload = { title: 'День народження 🎉', body: `Сьогодні у ${person.fullName} день народження — ${age} років!`, tag: `birthday-${stamp}-${person.nameKey}`, data: { url: '/' }, ttl: 86400 };
+    const name = birthdayName(person.fullName);
+    const payload = { title: 'День народження 🎉', body: `Сьогодні день народження ${name}! Виповнилося ${agePhrase(age)}.`, tag: `birthday-${stamp}-${person.groupKey || ''}-${person.nameKey}`, data: { url: '/' }, ttl: 86400 };
     await Promise.allSettled(subs.map(sb => sendPush(sb, payload)));
   }
 }
