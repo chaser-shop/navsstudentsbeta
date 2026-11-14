@@ -1,0 +1,1162 @@
+--- a/tests/run_pure.py
++++ b/tests/run_pure.py
+@@ -1,7 +1,7 @@
+ """Запуск чистих тестів без pytest: python -m tests.run_pure"""
+ import importlib, sys, traceback
+ fails = 0
+-for m in ("test_compliance", "test_bot_logic", "test_catalog", "test_dashboard_logic", "test_lines", "test_subscription", "test_sheet_sync", "test_discounts", "test_receipt"):
++for m in ("test_compliance", "test_bot_logic", "test_catalog", "test_dashboard_logic", "test_lines", "test_subscription", "test_sheet_sync", "test_discounts", "test_promo", "test_receipt"):
+     mod = importlib.import_module(f"tests.{m}")
+     for n in sorted(x for x in dir(mod) if x.startswith("test_")):
+         try:
+--- a/frontend/admin/index.html
++++ b/frontend/admin/index.html
+@@ -97,10 +97,29 @@
+         <p class="muted">Знижка рахується від суми товарів у замовленні й діє лише для опту. Рівень спрацьовує, коли сума не менша за «Від». Видаліть усі рівні, щоб вимкнути знижки.</p>
+         <div id="discountTiers"></div>
+         <div class="form-actions" style="justify-content:flex-start"><button type="button" class="btn" id="addTier">+ Додати рівень</button></div>
++        <h3>Реферальна програма</h3>
++        <p class="muted">Клієнт ділиться посиланням зі свого профілю в магазині («Запросити друга»). Друг одразу отримує одноразовий промокод на перше замовлення, а той, хто запросив, — коли перше замовлення друга отримає статус «Виконане». 0 — вимкнути.</p>
++        <div class="settings-grid">
++          <label>Знижка для запрошеного друга, %<input id="refFriend" type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="3"></label>
++          <label>Знижка для того, хто запросив, %<input id="refReward" type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="3"></label>
++        </div>
+         <h3>Популярні категорії</h3><p class="muted">Встанови власні назви, підписи та зображення для карток на головному екрані.</p>
+         <div id="categorySettings" class="category-settings"></div>
+         <div class="form-actions"><button class="btn primary" type="submit">Зберегти налаштування</button></div>
+       </form>
++      <div class="settings-panel" id="promoPanel" style="margin-top:18px">
++        <h3>Промокоди</h3>
++        <p class="muted">Знижка в % від суми товарів. Додається до знижки за сумою замовлення. Один клієнт може використати код один раз. Персональні коди рефералки тут не показуються.</p>
++        <div class="settings-grid">
++          <label>Код (необов’язково)<input id="promoCode" maxlength="32" autocomplete="off" placeholder="Порожньо — код створиться сам"></label>
++          <label>Знижка, %<input id="promoPercent" type="number" min="0.01" max="100" step="any" inputmode="decimal" placeholder="10"></label>
++          <label>Скільки разів можна використати<input id="promoMax" type="number" min="1" step="1" inputmode="numeric" placeholder="Порожньо — без ліміту"></label>
++          <label>Діє до (включно)<input id="promoExp" type="date"></label>
++        </div>
++        <div class="form-actions" style="justify-content:flex-start"><button type="button" class="btn primary" id="promoAdd">Створити промокод</button></div>
++        <div id="promoList"></div>
++        <p id="promoEmpty" class="muted hide">Промокодів ще немає.</p>
++      </div>
+       </section>
+   </main>
+ 
+--- a/frontend/admin/js/admin.js
++++ b/frontend/admin/js/admin.js
+@@ -396,13 +396,14 @@
+ }
+ async function loadSettings() {
+   const s = await api('/api/settings');
+-  for (const [id, key] of [['shopName','shop_name'],['shopSlogan','slogan'],['shopContact','contact'],['shopAbout','about'],['shopHours','hours'],['shopHero','hero_title'],['shopHeroText','hero_text'],['payCard','payment_card'],['payManager','manager_username'],['receiptTitle','receipt_title'],['minOrder','min_order_total'],['minOrderRetail','min_order_retail'],['retailMarkup','retail_markup']]) $(id).value = s[key] ?? '';
++  for (const [id, key] of [['shopName','shop_name'],['shopSlogan','slogan'],['shopContact','contact'],['shopAbout','about'],['shopHours','hours'],['shopHero','hero_title'],['shopHeroText','hero_text'],['payCard','payment_card'],['payManager','manager_username'],['receiptTitle','receipt_title'],['minOrder','min_order_total'],['minOrderRetail','min_order_retail'],['retailMarkup','retail_markup'],['refFriend','referral_friend_percent'],['refReward','referral_reward_percent']]) $(id).value = s[key] ?? '';
+   const cats = s.popular_categories || {};
+   $('categorySettings').innerHTML = S.categories.map(c => {
+     const x = cats[c.id] || {};
+     return `<div class="setting-card"><div class="setting-preview">${x.image ? `<img src="/img/${encodeURIComponent(String(x.image).split('/').pop())}" alt="">` : '<span>Без фото</span>'}</div><div class="setting-fields"><b>${esc(c.label)}</b><label>Назва в магазині<input data-cat-title="${esc(c.id)}" value="${esc(x.title || c.label)}"></label><label>Підпис<input data-cat-sub="${esc(c.id)}" value="${esc(x.sub || '')}"></label><label class="btn">Змінити зображення<input type="file" accept="image/*" data-cat-image="${esc(c.id)}" hidden></label></div></div>`;
+   }).join('');
+   renderTiers(s.discount_tiers || []);
++  loadPromo();
+   await loadLines();
+ }
+ function tierRow(from = '', pct = '') {
+@@ -416,11 +417,50 @@
+     .filter((t) => t.from || t.percent);
+ }
+ async function loadLines() { try { const r = await api('/api/lines'); S.lineData = r.lines; $('allLines').innerHTML = r.lines.map((l) => `<option value="${esc(l.name)}">`).join(''); if (!$('linesView').classList.contains('hide')) renderLines(); } catch (e) { toast(e.message, true); } }
++// ---------- промокоди ----------
++const PR = { rows: [] };
++async function loadPromo() {
++  try { PR.rows = (await api('/api/promo')).items; renderPromo(); } catch (e) { toast(e.message, true); }
++}
++function renderPromo() {
++  $('promoEmpty').classList.toggle('hide', PR.rows.length > 0);
++  $('promoList').innerHTML = PR.rows.map((p) => {
++    const left = p.uses_left == null ? 'без ліміту' : `залишилось ${p.uses_left} з ${p.max_uses}`;
++    const exp = p.expires_at ? ' · до ' + String(p.expires_at).slice(0, 10) : '';
++    return `<div class="crow promo-row" data-code="${esc(p.id)}"><span><b>${esc(p.id)}</b> · −${esc(p.percent)}% · використано ${esc(p.used)} · ${esc(left)}${esc(exp)}</span>
++      <span><span class="badge ${p.active ? 'ok' : 'bd'}">${p.active ? 'діє' : 'вимкнено'}</span>
++      <button type="button" class="btn" data-promo-toggle>${p.active ? 'Вимкнути' : 'Увімкнути'}</button>
++      <button type="button" class="btn danger" data-promo-del aria-label="Видалити промокод">✕</button></span></div>`;
++  }).join('');
++}
++$('promoAdd').onclick = async () => {
++  const percent = $('promoPercent').value.trim(), max = $('promoMax').value.trim();
++  if (!/^\d{1,3}([.,]\d{1,2})?$/.test(percent)) { toast('Знижка — число від 0.01 до 100 (до 2 знаків після коми)', true); return; }
++  try {
++    const c = await api('/api/promo', { method: 'POST', json: { code: $('promoCode').value.trim() || null, percent, max_uses: max ? Number(max) : null, expires: $('promoExp').value || null } });
++    toast('Промокод створено: ' + c.id);
++    ['promoCode', 'promoPercent', 'promoMax', 'promoExp'].forEach((i) => ($(i).value = ''));
++    await loadPromo();
++  } catch (err) { toast(err.message, true); }
++};
++$('promoList').addEventListener('click', async (e) => {
++  const row = e.target.closest('.promo-row'); if (!row) return;
++  const code = row.dataset.code, p = PR.rows.find((x) => x.id === code), url = '/api/promo/' + encodeURIComponent(code);
++  try {
++    if (e.target.closest('[data-promo-del]')) {
++      if (!confirm(`Видалити промокод ${code}?`)) return;
++      await api(url, { method: 'DELETE' }); toast('Промокод видалено');
++    } else if (e.target.closest('[data-promo-toggle]')) {
++      await api(url, { method: 'PATCH', json: { active: !p.active } });
++    } else return;
++    await loadPromo();
++  } catch (err) { toast(err.message, true); }
++});
+ $('settingsForm').onsubmit = async e => {
+   e.preventDefault();
+   try {
+     const s = await api('/api/settings');
+-    const data = { shop_name:$('shopName').value.trim(), slogan:$('shopSlogan').value.trim(), contact:$('shopContact').value.trim(), about:$('shopAbout').value.trim(), hours:$('shopHours').value.trim(), hero_title:$('shopHero').value.trim(), hero_text:$('shopHeroText').value.trim(), payment_card:$('payCard').value.trim(), manager_username:$('payManager').value.trim(), receipt_title:$('receiptTitle').value.trim(), min_order_total:$('minOrder').value.trim(), min_order_retail:$('minOrderRetail').value.trim(), retail_markup:$('retailMarkup').value.trim(), discount_tiers:readTiers(), popular_categories:s.popular_categories || {} };
++    const data = { shop_name:$('shopName').value.trim(), slogan:$('shopSlogan').value.trim(), contact:$('shopContact').value.trim(), about:$('shopAbout').value.trim(), hours:$('shopHours').value.trim(), hero_title:$('shopHero').value.trim(), hero_text:$('shopHeroText').value.trim(), payment_card:$('payCard').value.trim(), manager_username:$('payManager').value.trim(), receipt_title:$('receiptTitle').value.trim(), min_order_total:$('minOrder').value.trim(), min_order_retail:$('minOrderRetail').value.trim(), retail_markup:$('retailMarkup').value.trim(), discount_tiers:readTiers(), referral_friend_percent:$('refFriend').value.trim(), referral_reward_percent:$('refReward').value.trim(), popular_categories:s.popular_categories || {} };
+     for (const c of S.categories) {
+       const x = data.popular_categories[c.id] || {};
+       x.title = document.querySelector(`[data-cat-title="${CSS.escape(c.id)}"]`)?.value.trim() || c.label;
+@@ -588,6 +628,7 @@
+       <span>${esc([d.city, d.area].filter(Boolean).join(', '))}${d.warehouse ? ' · ' + esc(d.warehouse) : ''}</span></div>
+     <div class="ucart">${(o.items || []).map((i) => `<div class="crow"><span>${esc(i.display_name || i.name)}</span><span>${i.qty} × ${fmtMoney(i.unit_price)}</span></div>`).join('')}
+       ${Number(o.discount) > 0 ? `<div class="crow"><span>Знижка</span><span>−${fmtMoney(o.discount)}</span></div>` : ''}
++      ${o.promo ? `<div class="crow"><span>↳ у т.ч. промокод ${esc(o.promo.code)} (−${esc(o.promo.percent)}%)</span><span>−${fmtMoney(o.promo.amount)}</span></div>` : ''}
+       <div class="crow tot"><span>Разом · 💳 ${esc((o.payment && o.payment.label) || (o.prepay_consent ? 'Накладений платіж' : '—'))}</span><b>${fmtMoney(o.total)}</b></div>
+       ${o.profit != null ? `<div class="crow profit"><span>💰 Ваш чистий прибуток</span><b>${fmtMoney(o.profit)}</b></div>` : ''}</div>
+     <div class="ctl"><button class="btn rcpt" type="button">🧾 Чек</button><button class="btn resend" type="button" title="Надіслати покупцю подяку з реквізитами та чек ще раз">↻ Надіслати знову</button>${c.tg_id > 0 ? `<button class="btn tochat" type="button" data-tg="${c.tg_id}">💬 Чат</button>` : ''}</div>
+--- a/frontend/miniapp/css/styles.css
++++ b/frontend/miniapp/css/styles.css
+@@ -287,3 +287,9 @@
+ .pmedia .flame svg{width:30px;height:30px}
+ .bd.fire{background:linear-gradient(135deg,#ff5a1f,#ffb020);color:#1a0a00}
+ @media (prefers-reduced-motion:reduce){.flame svg{animation:none}}
++
++/* промокод і «Запросити друга» */
++.promo{display:flex;gap:8px;align-items:stretch}
++.promo .inp{flex:1;min-width:0}.promo .inp:not(:placeholder-shown){text-transform:uppercase}
++.promo .btn{height:50px;padding:0 16px;flex-shrink:0}
++.invite{display:grid;gap:10px;margin-top:14px}
+--- a/frontend/miniapp/js/app.js
++++ b/frontend/miniapp/js/app.js
+@@ -36,6 +36,7 @@
+   pkg: '<path d="M12 3 3 7.5v9L12 21l9-4.5v-9z"/><path d="M3 7.5 12 12l9-4.5M12 12v9"/>',
+   help: '<circle cx="12" cy="12" r="9"/><path d="M9.500 9.500a2.500 2.500 0 1 1 3.500 2.300c-.7.400-1 .900-1 1.700M12 17h.01"/>',
+   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
++  gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8M7.5 8a2.5 2.5 0 1 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 1 1 0 5"/>',
+   card: '<rect x="3" y="5" width="18" height="14" rx="2.500"/><circle cx="9" cy="11" r="2"/><path d="M6 16.500c.600-1.700 5.400-1.700 6 0M15 10h3M15 14h3"/>',
+ };
+ const ic = (n, s = 22) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
+@@ -242,18 +243,21 @@
+ const prepayAmt = () => Number(SHOP.prepay) || 100;
+ const prepayOn = () => !!SHOP.prepay_enabled;          // передоплату при накладеному платежі вимкнено, поки сервер не поверне true
+ // Знижка за сумою (лише опт): рівні приходять з /catalog, сервер рахує так само й підтверджує остаточну суму
++const promo = { code: '', percent: 0, input: '', error: '', busy: false };   // застосований промокод: перевіряє й остаточно рахує сервер
+ const discInfo = () => {
+   const sub = S.cartTotal();
+-  if (isRetail()) return { sub, pct: 0, amount: 0, next: null };
+   let cur = null, next = null;
+-  [...(SHOP.discounts || [])].sort((a, b) => a.from - b.from).forEach(t => { if (sub >= t.from) cur = t; else if (!next) next = t; });
+-  const pct = cur ? Number(cur.percent) : 0;
+-  return { sub, pct, amount: Math.round(sub * pct) / 100, next };
++  if (!isRetail()) [...(SHOP.discounts || [])].sort((a, b) => a.from - b.from).forEach(t => { if (sub >= t.from) cur = t; else if (!next) next = t; });
++  const pct = cur ? Number(cur.percent) : 0, amount = Math.round(sub * pct) / 100;
++  const promoAmt = promo.code ? Math.min(Math.round(sub * promo.percent) / 100, sub - amount) : 0;   // промокод додається до знижки за сумою
++  return { sub, pct, amount, next, promoAmt };
+ };
+-const payTotal = () => { const d = discInfo(); return d.sub - d.amount; };
++const payTotal = () => { const d = discInfo(); return d.sub - d.amount - d.promoAmt; };
+ const discRows = () => {
+   const d = discInfo();
+-  return (d.amount > 0 ? `<div class="r2"><span>Сума товарів</span><span>${money(d.sub)}</span></div><div class="r2"><span>Знижка ${d.pct}%</span><span>−${money(d.amount)}</span></div>` : '')
++  return ((d.amount > 0 || d.promoAmt > 0) ? `<div class="r2"><span>Сума товарів</span><span>${money(d.sub)}</span></div>` : '')
++    + (d.amount > 0 ? `<div class="r2"><span>Знижка ${d.pct}%</span><span>−${money(d.amount)}</span></div>` : '')
++    + (d.promoAmt > 0 ? `<div class="r2"><span>Промокод ${esc(promo.code)} · ${promo.percent}%</span><span>−${money(d.promoAmt)}</span></div>` : '')
+     + (d.next ? `<div class="hint">Ще ${money(d.next.from - d.sub)} до знижки ${d.next.percent}%</div>` : '');
+ };
+ const belowMin = () => S.cartTotal() < minOrder();
+@@ -299,6 +303,7 @@
+   <div class="list menu">
+     ${item('pkg', 'Мої замовлення', 'Статус і історія', '#/profile/orders')}
+     ${item('heart', 'Обране', favN ? `${favN} ${pl(favN, ['товар', 'товари', 'товарів'])}` : 'Поки порожньо', '#/profile/favs')}
++    ${item('gift', 'Запросити друга', 'Промокод за кожного друга', '#/profile/invite')}
+     ${item('card', 'Особисті дані', 'Імʼя, телефон', '#/profile/info')}
+     ${item('help', 'Допомога', 'Часті запитання', '#/profile/help')}
+     ${item('info', 'Про магазин', esc(STORE.name), '#/profile/about')}
+@@ -337,6 +342,40 @@
+   <div class="list">${o.items.map(i => `<div class="li"><div class="t"><b>${esc(i.name)}</b><span>${i.qty} × ${money(i.unit_price)}</span></div><b>${money(i.line_total)}</b></div>`).join('')}</div>
+   <div class="sum">${o.discount > 0 ? `<div class="r2"><span>Знижка</span><span>−${money(o.discount)}</span></div>` : ''}<div class="tot" style="border:0;margin:0;padding:0"><span>Сума</span><span>${money(o.total)}</span></div></div>`;
+ }
++/* ---------- запросити друга ---------- */
++let refCache = null, refErr = '', refLoading = false;
++async function fetchRef() {
++  if (refLoading) return;
++  refLoading = true; refErr = '';
++  try { refCache = await api('/referral'); } catch (e) { refErr = e.message; }
++  refLoading = false;
++  const r = route(); if (r[0] === 'profile' && r[1] === 'invite') render();
++}
++function copyText(t) {
++  const done = () => toast('Скопійовано');
++  if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(t).then(done, () => legacyCopy(t, done)); return; }
++  legacyCopy(t, done);
++}
++function legacyCopy(t, done) {
++  const a = document.createElement('textarea'); a.value = t; a.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(a); a.select();
++  try { document.execCommand('copy'); done(); } catch { toast('Не вдалося скопіювати'); }
++  a.remove();
++}
++function invite() {
++  if (refCache === null && !refErr) { fetchRef(); return `${head('Запросити друга')}${loading()}`; }
++  if (refErr) return `${head('Запросити друга')}<div class="err">${esc(refErr)}</div><button class="btn sec2 block" data-act="reref">Спробувати ще раз</button>`;
++  const r = refCache, off = r.friend_percent <= 0 && r.reward_percent <= 0;
++  const how = off ? 'Реферальна програма зараз вимкнена.'
++    : 'Надішліть другові своє посилання. ' + (r.friend_percent > 0 ? `Він отримає промокод на ${r.friend_percent}% на перше замовлення. ` : '')
++      + (r.reward_percent > 0 ? `Коли його перше замовлення буде виконано, ви отримаєте промокод на ${r.reward_percent}%.` : '');
++  const codes = r.codes.length ? `<div class="h3">Ваші промокоди</div>` + r.codes.map(c => `<div class="pick"><div class="grow"><b>${esc(c.code)}</b><small>Знижка ${c.percent}% · одноразовий</small></div><button class="lnk" data-copy="${esc(c.code)}">Копіювати</button></div>`).join('')
++    + '<div class="hint">Введіть код у полі «Промокод» при оформленні замовлення.</div>' : '';
++  return `${head('Запросити друга')}
++  <div class="faq"><b>Як це працює</b><p>${esc(how)}</p></div>
++  ${off ? '' : r.link ? `<div class="kv"><div><span>Запрошено друзів</span><b>${r.invited}</b></div><div><span>Нагород отримано</span><b>${r.rewarded}</b></div></div>
++  <div class="invite"><button class="btn block" data-share="${esc(r.link)}">Поділитися посиланням</button><button class="btn sec2 block" data-copy="${esc(r.link)}">Копіювати посилання</button></div>` : '<div class="err">Посилання тимчасово недоступне. Спробуйте пізніше.</div>'}
++  ${codes}`;
++}
+ function favs() {
+   const items = S.state().favs.map(S.byId).filter(Boolean);
+   return `${head('Обране', { sub: items.length ? `${items.length} ${pl(items.length, ['товар', 'товари', 'товарів'])}` : '' })}
+@@ -375,6 +414,20 @@
+   : co.whs.length ? co.whs.map((w, i) => `<button class="pick" data-wh="${i}"><div class="grow">${esc(w.title)}</div></button>`).join('')
+     + (co.whMore ? '<button class="btn sec2 block" data-act="whmore">Показати ще</button>' : '')
+   : '<div class="hint">Відділень не знайдено. Спробуйте інший запит.</div>';
++const promoBox = () => `<div class="h3">Промокод</div>` + (promo.code
++  ? `<div class="pick sel"><div class="grow"><b>${esc(promo.code)}</b><small>Знижка ${promo.percent}%</small></div><button class="lnk" data-act="promo-clear">Прибрати</button></div>`
++  : `<div class="promo"><input class="inp" data-promo autocomplete="off" autocapitalize="characters" maxlength="40" placeholder="Є промокод?" value="${esc(promo.input)}"><button class="btn sec2" data-act="promo-apply" ${promo.busy ? 'disabled' : ''}>Застосувати</button></div>`
++    + (promo.error ? `<div class="err" role="alert">${esc(promo.error)}</div>` : ''));
++async function applyPromo() {
++  const code = promo.input.trim();
++  if (!code) { promo.error = 'Введіть промокод'; render(); return; }
++  promo.busy = true; promo.error = '';
++  try {
++    const r = await api('/promo/check', { method: 'POST', body: JSON.stringify({ code }) });
++    promo.code = r.code; promo.percent = Number(r.percent); promo.input = ''; toast('Промокод застосовано');
++  } catch (e) { promo.error = e.message; }
++  promo.busy = false; render();
++}
+ const submitBtn = () => {
+   const t = payTotal();
+   return `<button class="btn block" data-act="submit" ${co.busy || belowMin() ? 'disabled' : ''}>${co.busy ? 'Оформлюємо…' : `Підтвердити замовлення · ${money(t)}`}</button>`;
+@@ -401,6 +454,7 @@
+     : `<label class="fld"><input class="inp" id="whq" enterkeyhint="search" autocomplete="off" placeholder="Номер відділення або вулиця" value="${esc(co.whQ)}"></label><div id="whres">${whList()}</div>`}` : ''}
+   ${minNote()}
+   ${co.error ? `<div class="err" role="alert">${esc(co.error)}</div>` : ''}
++  ${promoBox()}
+   ${payBox()}
+   <div class="sum"><div class="r2"><span>Товарів</span><span>${n}</span></div>${discRows()}<div class="tot"><span>Разом</span><span>${money(payTotal())}</span></div>
+     <div id="submit">${submitBtn()}</div><p class="demo">Після оформлення бот надішле реквізити та чек у чат. Деталі відправлення — від менеджера.</p></div>`;
+@@ -433,10 +487,10 @@
+       first_name: co.fn.trim(), last_name: co.ln.trim(), phone: co.phone.trim(),
+       delivery: { city: co.city.city, area: co.city.area || '', city_ref: co.city.city_ref, warehouse: co.wh.title, warehouse_ref: co.wh.ref },
+       items: S.cartItems().map(i => ({ product_id: i.vid, qty: i.qty, nicotine_mg: i.mg || null })),
+-      payment_method: co.pay, order_type: S.mode(),
++      payment_method: co.pay, order_type: S.mode(), promo_code: promo.code || null,
+     }) });
+     S.set({ profile: { fn: co.fn.trim(), ln: co.ln.trim(), phone: co.phone.trim() } });
+-    S.clearCart(); updateBadges(); ordersCache = null;
++    S.clearCart(); updateBadges(); ordersCache = null; promo.code = ''; promo.percent = 0; promo.input = ''; promo.error = ''; refCache = null;
+     co.done = { number: r.number, total: r.total, pay: r.payment_method }; co.city = null; co.wh = null; co.cityQ = ''; co.whQ = ''; co.tried = false; co.pay = 'cod';
+     try { tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred('success'); } catch { /* ignore */ }
+   } catch (e) { co.error = e.message; }
+@@ -471,7 +525,7 @@
+   if (TABS.some(t => t[0] === a)) lastTab = a;
+   const screens = {
+     home: () => home(), catalog: () => b ? category(b) : catalog(), search, cart, checkout: () => checkout(), product: () => product(b),
+-    profile: () => !b ? profile() : b === 'orders' ? (c ? orderDetail(c) : orders()) : b === 'favs' ? favs() : b === 'info' ? info() : b === 'help' ? help() : b === 'about' ? about() : notFound(),
++    profile: () => !b ? profile() : b === 'orders' ? (c ? orderDetail(c) : orders()) : b === 'favs' ? favs() : b === 'invite' ? invite() : b === 'info' ? info() : b === 'help' ? help() : b === 'about' ? about() : notFound(),
+   };
+   view.innerHTML = (screens[a] || notFound)();
+   if (a !== 'checkout' && co.done) co.done = null;
+@@ -496,7 +550,7 @@
+ /* ---------- дії ---------- */
+ function pop(el, cls) { if (!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+ document.addEventListener('click', e => {
+-  const t = e.target.closest('[data-fav],[data-add],[data-addv],[data-var],[data-mg],[data-qty],[data-rm],[data-sort],[data-brand],[data-q],[data-clear],[data-city],[data-wh],[data-act],[data-pickmode],[data-back],[data-go]');
++  const t = e.target.closest('[data-fav],[data-add],[data-addv],[data-var],[data-mg],[data-qty],[data-rm],[data-sort],[data-brand],[data-q],[data-clear],[data-city],[data-wh],[data-copy],[data-share],[data-act],[data-pickmode],[data-back],[data-go]');
+   if (!t) return;
+   const d = t.dataset;
+   const pk = (t.dataset.pick || (t.closest('[data-pick]') || {dataset: {}}).dataset.pick || '').split('|');
+@@ -530,6 +584,14 @@
+   else if (d.act === 'citychange') { co.city = null; co.wh = null; co.cities = []; co.whs = []; render(); const i = $('#cityq'); i && i.focus(); }
+   else if (d.act === 'whchange') { co.wh = null; render(); loadWh(); }
+   else if (d.act === 'whmore') { co.whPage++; loadWh(true); }
++  else if (d.act === 'promo-apply') applyPromo();
++  else if (d.act === 'promo-clear') { promo.code = ''; promo.percent = 0; promo.error = ''; render(); }
++  else if (d.copy) copyText(d.copy);
++  else if (d.share) {
++    const u = 'https://t.me/share/url?url=' + encodeURIComponent(d.share) + '&text=' + encodeURIComponent('Заходь у наш магазин — отримаєш знижку на перше замовлення');
++    if (tg && tg.openTelegramLink) tg.openTelegramLink(u); else window.open(u, '_blank', 'noopener');
++  }
++  else if (d.act === 'reref') { refErr = ''; refCache = null; render(); }
+   else if (d.act === 'submit') submitOrder();
+   else if (d.act === 'done-orders') { co.done = null; go('#/profile/orders'); }
+   else if (d.act === 'done-home') { co.done = null; go('#/catalog'); }
+@@ -552,6 +614,7 @@
+ });
+ document.addEventListener('input', e => {
+   const t = e.target;
++  if (t.hasAttribute && t.hasAttribute('data-promo')) { promo.input = t.value; promo.error = ''; return; }
+   if (t.dataset && t.dataset.f) {                       // поля оформлення: зберігаємо без перемальовування (не губимо фокус)
+     co[t.dataset.f] = t.value; co.error = '';
+     if (co.tried) t.classList.toggle('bad', t.dataset.f === 'phone' ? !phoneOk(t.value) : !t.value.trim());
+@@ -569,7 +632,10 @@
+   co.pay = e.target.value === 'prepaid' ? 'prepaid' : 'cod'; co.error = '';
+   const b = $('#paybox'); if (b) b.querySelectorAll('.pay').forEach(l => l.classList.toggle('on', l.querySelector('input').checked));
+ });
+-document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'q') e.target.blur(); });
++document.addEventListener('keydown', e => {
++  if (e.key === 'Enter' && e.target.id === 'q') e.target.blur();
++  if (e.key === 'Enter' && e.target.hasAttribute && e.target.hasAttribute('data-promo')) { e.preventDefault(); applyPromo(); }
++});
+ document.addEventListener('focusin', e => { if (e.target.matches('input')) document.body.classList.add('kb'); });
+ document.addEventListener('focusout', () => setTimeout(() => { if (!document.activeElement || !document.activeElement.matches('input')) document.body.classList.remove('kb'); }, 80));
+ 
+--- a/bot/shop_bot.py
++++ b/bot/shop_bot.py
+@@ -5,6 +5,7 @@
+ import logging
+ 
+ from backend.config import settings
++from backend.services import referral
+ from backend.services.telegram_api import tg_call, webhook_token, notify_operators
+ from backend.database import get_db
+ 
+@@ -53,6 +54,24 @@
+     except Exception:
+         # Помилка реєстрації не повинна завадити відповіді бота користувачу.
+         log.exception("Не вдалося зберегти Telegram-користувача %s", uid)
++
++
++def _referral_welcome(text: str, user: dict, db=None) -> str:
++    """/start ref_<id>: запам'ятовує, хто запросив, і повертає рядок про подарунковий промокод (або порожній)."""
++    parts = text.split(maxsplit=1)
++    referrer = referral.parse_start(parts[1] if len(parts) > 1 else "")
++    uid = user.get("id")
++    if not referrer or not isinstance(uid, int):
++        return ""
++    try:
++        gift = referral.attach(db if db is not None else get_db(), uid, referrer)
++    except Exception:
++        log.exception("Не вдалося зберегти запрошення %s -> %s", referrer, uid)
++        return ""
++    if not gift:
++        return ""
++    return (f"\n\n🎁 Ви прийшли за запрошенням друга. Ваш промокод: {gift['code']}\n"
++            f"Знижка {gift['percent']:g}% на перше замовлення — введіть його при оформленні.")
+ 
+ 
+ _MEDIA_LABELS = {"voice": "🎤 Голосове повідомлення", "video": "🎥 Відео", "video_note": "⭕ Відеоповідомлення",
+@@ -122,8 +141,10 @@
+         except Exception:
+             log.exception("Не вдалося обробити повідомлення покупця %s", chat.get("id"))
+         return
++    gift = ""
+     if text.split()[0].split("@")[0] == "/start":
+         _register_user(user, call=call, db=db)
++        gift = _referral_welcome(text, user, db)
+     url = app_url()
+     if not url:
+         call("sendMessage", {"chat_id": chat["id"], "text": "Магазин ще налаштовується. Спробуйте пізніше."})
+@@ -131,7 +152,7 @@
+     if text.startswith("/help"):
+         body = "Каталог, кошик і оформлення замовлення — у магазині. Доставка Новою поштою. Лише для повнолітніх (18+).\nЗапитання можна просто написати сюди — їх прочитає менеджер."
+     else:
+-        body = "Вітаємо! Натисніть кнопку нижче, щоб відкрити каталог.\nМагазин призначений лише для повнолітніх (18+)."
++        body = "Вітаємо! Натисніть кнопку нижче, щоб відкрити каталог.\nМагазин призначений лише для повнолітніх (18+)." + gift
+     call("sendMessage", {"chat_id": chat["id"], "text": body, "reply_markup": _open_markup(url)})
+ 
+ 
+--- a/backend/config.py
++++ b/backend/config.py
+@@ -48,6 +48,11 @@
+     @property
+     def bot_token(self) -> str:
+         return os.environ.get("BOT_TOKEN", "")
++
++    @property
++    def bot_username(self) -> str:
++        """Username бота без @ (для реферальних посилань). Не задано — беремо з Telegram (getMe)."""
++        return os.environ.get("BOT_USERNAME", "").strip().lstrip("@")
+ 
+     @property
+     def webhook_secret(self) -> str:
+--- a/backend/database.py
++++ b/backend/database.py
+@@ -33,6 +33,8 @@
+     db.products.create_index([("status", ASCENDING)])
+     db.messages.create_index([("tg_id", ASCENDING), ("at", ASCENDING)])
+     db.chats.create_index([("last_at", ASCENDING)])
++    db.users.create_index([("referred_by", ASCENDING)])
++    db.promo_codes.create_index([("owner_tg_id", ASCENDING)])
+     db.admins.create_index([("username", ASCENDING)], unique=True)
+     db.audit_log.create_index([("at", ASCENDING)])
+     db.sync_sessions.create_index([("created_at", ASCENDING)], expireAfterSeconds=7 * 86400)   # непідтверджені зміни з Excel зникають за тиждень
+--- a/backend/main.py
++++ b/backend/main.py
+@@ -15,7 +15,7 @@
+ 
+ from .config import settings
+ from .database import ensure_indexes, get_db
+-from .routes import auth, bot, broadcast, chats, imports, lines, media, orders, pricing, products, settings as settings_routes, shop, sync, telegram, users
++from .routes import auth, bot, broadcast, chats, imports, lines, media, orders, pricing, products, promo, settings as settings_routes, shop, sync, telegram, users
+ 
+ ROOT = Path(__file__).resolve().parent.parent
+ log = logging.getLogger("app")
+@@ -50,7 +50,7 @@
+ 
+ app = FastAPI(title="Back-office", lifespan=lifespan, docs_url=None, redoc_url=None)
+ app.add_middleware(GZipMiddleware, minimum_size=1024)
+-for r in (auth, products, lines, media, pricing, imports, sync, orders, settings_routes, bot, broadcast, chats, shop, telegram, users):
++for r in (auth, products, lines, media, pricing, imports, sync, orders, settings_routes, bot, broadcast, chats, shop, telegram, users, promo):
+     app.include_router(r.router)
+ 
+ 
+--- a/backend/models/schemas.py
++++ b/backend/models/schemas.py
+@@ -85,6 +85,22 @@
+     markups: dict[Category, str]
+ 
+ 
++class PromoCodeIn(BaseModel):
++    """Новий промокод (адмін). code порожній — згенерується; max_uses порожній — без ліміту; expires — остання дата дії."""
++    code: str | None = Field(None, max_length=32)
++    percent: str = Field(pattern=r"^\d{1,3}([.,]\d{1,2})?$")
++    max_uses: int | None = Field(None, ge=1, le=1_000_000)
++    expires: str | None = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$")
++
++
++class PromoActiveIn(BaseModel):
++    active: bool
++
++
++class PromoCheckIn(BaseModel):
++    code: str = Field(min_length=1, max_length=40)
++
++
+ class OrderItemIn(BaseModel):
+     product_id: str
+     qty: int = Field(ge=1, le=1000)
+@@ -141,6 +157,7 @@
+     items: list[ShopItem] = Field(min_length=1, max_length=100)
+     order_type: Literal["wholesale", "retail"] = "wholesale"   # опт / роздріб (роздріб: націнка на позиції, окремий мінімум)
+     payment_method: Literal["cod", "prepaid"] = "cod"   # cod — накладений платіж (передоплата), prepaid — повна оплата на карту
++    promo_code: str | None = Field(None, max_length=40)    # промокод (необов'язково); знижку рахує сервер
+     prepay_accepted: bool = False          # застаріле поле (галочка): більше не вимагається, вибір способу оплати = згода
+ 
+     @field_validator("first_name", "last_name")
+--- a/backend/routes/orders.py
++++ b/backend/routes/orders.py
+@@ -1,3 +1,4 @@
++import logging
+ import re
+ from datetime import datetime, timedelta
+ 
+@@ -6,7 +7,7 @@
+ from ..auth.security import audit, current_admin
+ from ..database import get_db, load, public
+ from ..models.schemas import NoteIn, OrderIn, StatusIn
+-from ..services import orders as svc
++from ..services import orders as svc, referral
+ from ..services.order_messages import deliver_order
+ from ..services.receipt import render_receipt
+ from ..services.shop_settings import get_discount_tiers, get_shop
+@@ -70,6 +71,11 @@
+     text = svc.customer_message(number, body.status, body.reason)
+     if body.notify and text and isinstance(tg_id, int) and tg_id > 0 and (before or {}).get("status") != body.status:
+         notified = bool(tg_call("sendMessage", {"chat_id": tg_id, "text": text}).get("ok"))
++    if body.status == "done" and (before or {}).get("status") != "done":
++        try:                                 # перше виконане замовлення запрошеного друга -> промокод тому, хто запросив
++            referral.reward_on_done(db, load(o))
++        except Exception:
++            logging.getLogger("referral").exception("Не вдалося видати реферальну нагороду за %s", number)
+     return {**public(o), "notified": notified}
+ 
+ 
+--- a/backend/routes/settings.py
++++ b/backend/routes/settings.py
+@@ -3,13 +3,14 @@
+ from ..auth.security import audit, current_admin
+ from ..database import get_db
+ from ..services.discounts import normalize_tiers
+-from ..services.shop_settings import get_discount_tiers, get_min_order, get_retail_markup
++from ..services.shop_settings import get_discount_tiers, get_min_order, get_referral, get_retail_markup
+ 
+ router = APIRouter(prefix="/api/settings", tags=["settings"])
+ ALLOWED = {"shop_name", "slogan", "contact", "about", "hours", "hero_title", "hero_text", "popular_categories",
+-           "payment_card", "manager_username", "receipt_title", "min_order_total", "min_order_retail", "retail_markup", "discount_tiers"}
++           "payment_card", "manager_username", "receipt_title", "min_order_total", "min_order_retail", "retail_markup", "discount_tiers", "referral_reward_percent", "referral_friend_percent"}
+ NUMERIC = {"min_order_total": "Мінімальна сума (опт)", "min_order_retail": "Мінімальна сума (роздріб)",
+            "retail_markup": "Націнка для роздробу"}
++PERCENT = {"referral_reward_percent": "Знижка для того, хто запросив", "referral_friend_percent": "Знижка для запрошеного"}
+ 
+ 
+ @router.get("")
+@@ -20,6 +21,8 @@
+     out["min_order_retail"] = get_min_order(db, "retail")
+     out["retail_markup"] = get_retail_markup(db)
+     out["discount_tiers"] = get_discount_tiers(db)
++    ref = get_referral(db)
++    out["referral_reward_percent"], out["referral_friend_percent"] = ref["reward"], ref["friend"]
+     return out
+ 
+ 
+@@ -44,6 +47,16 @@
+                 data[k] = normalize_tiers(v)
+             except ValueError as e:
+                 raise HTTPException(422, str(e))
++        elif k in PERCENT:
++            if str(v).strip() == "":
++                continue
++            try:
++                n = int(float(str(v).replace(",", ".").strip()))
++            except ValueError:
++                raise HTTPException(422, f"{PERCENT[k]} — ціле число від 0 до 100")
++            if not 0 <= n <= 100:
++                raise HTTPException(422, f"{PERCENT[k]} — від 0 до 100 %")
++            data[k] = n
+         elif k in NUMERIC:
+             if str(v).strip() == "":
+                 continue                     # порожнє поле = лишається поточне значення
+--- a/backend/routes/shop.py
++++ b/backend/routes/shop.py
+@@ -14,8 +14,8 @@
+ from ..auth.security import audit
+ from ..config import settings
+ from ..database import get_db, load, public
+-from ..models.schemas import CartSyncIn, ShopOrderIn
+-from ..services import orders as svc
++from ..models.schemas import CartSyncIn, PromoCheckIn, ShopOrderIn
++from ..services import orders as svc, promo as promo_svc, referral
+ from ..services.catalog import build_catalog
+ from ..services.order_messages import deliver_order
+ from ..services.shop_settings import get_discount_tiers, get_min_order, get_retail_markup
+@@ -125,6 +125,25 @@
+     return {"ok": True}
+ 
+ 
++@router.post("/promo/check")
++def promo_check(body: PromoCheckIn, db=Depends(get_db), user=Depends(tg_user)):
++    """Перевірка промокоду в кошику (без використання): повертає відсоток, знижку остаточно рахує сервер при замовленні."""
++    doc = promo_svc.lookup(db, body.code)
++    try:
++        percent = promo_svc.check(doc, user["id"])
++    except promo_svc.PromoError as e:
++        raise HTTPException(422, str(e))
++    return {"code": doc["_id"], "percent": float(percent)}
++
++
++@router.get("/referral")
++def my_referral(db=Depends(get_db), user=Depends(tg_user)):
++    """Екран «Запросити друга»: посилання, скільки друзів запрошено, нагороджено й невикористані персональні коди."""
++    if user["id"] <= 0:
++        raise HTTPException(403, "Доступно лише в Telegram")
++    return referral.stats(db, user["id"])
++
++
+ @router.get("/np/cities")
+ def np_cities(q: str = "", user=Depends(tg_user)):
+     if len(q.strip()) < 2:
+@@ -154,8 +173,11 @@
+     otype = svc.ORDER_TYPES.get(o.get("order_type"), "Опт")
+     profit_line = (f"\n💰 Ваш чистий прибуток з цього замовлення: {float(profit):g} грн" if profit is not None
+                    else "\n💰 Прибуток не пораховано: у деяких товарів немає закупівельної ціни")
+-    disc = (f"\nЗнижка {float(o.get('discount_percent') or 0):g}%: −{float(o['discount']):g} грн"
+-            if float(o.get("discount") or 0) > 0 else "")
++    pr = o.get("promo")
++    tier = float(o.get("discount") or 0) - (float(pr["amount"]) if pr else 0)          # знижка за сумою окремо від промокоду
++    disc = (f"\nЗнижка {float(o.get('discount_percent') or 0):g}%: −{tier:g} грн" if tier > 0 else "")
++    if pr:
++        disc += f"\nПромокод {pr['code']} (−{float(pr['percent']):g}%): −{float(pr['amount']):g} грн"
+     return (f"🆕 Нове замовлення {o['number']} · {otype}\n{c['name']} · {c['phone']} · {who}\n"
+             f"{d.get('city', '')} ({d.get('area', '')})\n{d.get('warehouse', '')}\n\n{lines}\n{disc}\nРазом: {float(o['total']):g} грн\n"
+             f"💳 Оплата: {(o.get('payment') or {}).get('label', '—')}" + profit_line)
+@@ -172,6 +194,12 @@
+     customer = {"name": f"{body.first_name} {body.last_name}", "contact": f"@{user['username']}" if user.get("username") else "",
+                 "phone": body.phone, "delivery": body.delivery.model_dump(), "tg_id": uid,
+                 "tg_username": user.get("username") or ""}
++    used = None                                     # промокод «береться» атомарно; якщо замовлення не вийде — повертаємо
++    if body.promo_code and body.promo_code.strip():
++        try:
++            used = promo_svc.redeem(db, body.promo_code, uid)
++        except promo_svc.PromoError as e:
++            raise HTTPException(422, str(e))
+     try:
+         extra = {"payment": svc.payment_info(body.payment_method, settings.prepay_amount if settings.prepay_enabled else None)}
+         if body.payment_method == "cod" and settings.prepay_enabled:          # вибір накладеного платежу = згода на передоплату
+@@ -179,9 +207,15 @@
+         o = svc.create_order(db, customer, [i.model_dump() for i in body.items], f"tg:{uid}",
+                              min_total=get_min_order(db, body.order_type), extra=extra,
+                              order_type=body.order_type, retail_markup=get_retail_markup(db),
+-                             discount_tiers=get_discount_tiers(db))
++                             discount_tiers=get_discount_tiers(db), promo=used)
+     except svc.OrderError as e:
++        if used:
++            promo_svc.release(db, used, uid)
+         raise HTTPException(422, str(e))
++    except Exception:
++        if used:
++            promo_svc.release(db, used, uid)
++        raise
+     db.carts.delete_one({"_id": uid})
+     audit(db, f"tg:{uid}", "order.create", {"number": o["number"]})
+     bg.add_task(notify_operators, _order_text(o, user))
+--- a/backend/services/orders.py
++++ b/backend/services/orders.py
+@@ -6,7 +6,8 @@
+ from ..database import load, to_db
+ from .catalog import liquid_strengths
+ from .discounts import DISCOUNT_ORDER_TYPES, discount_for
+-from .pricing import money, order_totals
++from .pricing import D, money, order_totals
++from .promo import amount as promo_amount
+ 
+ STATUSES = ["new", "confirmed", "packing", "shipped", "done", "rejected", "in_progress", "cancelled"]   # in_progress/cancelled — старі
+ STATUS_LABELS = {"new": "Нове", "confirmed": "Підтверджене", "packing": "Збирається", "shipped": "Відправлене",
+@@ -149,7 +150,8 @@
+ 
+ 
+ def create_order(db, customer: dict, items: list, admin: str, min_total=None, extra: dict | None = None,
+-                 discount=0, order_type: str = "wholesale", retail_markup=0, discount_tiers=None) -> dict:
++                 discount=0, order_type: str = "wholesale", retail_markup=0, discount_tiers=None, promo: dict | None = None) -> dict:
++    """promo = {code, percent}: уже перевірений і «використаний» промокод (services/promo.py). Додається до знижки за сумою."""
+     if order_type not in ORDER_TYPES:
+         raise OrderError("Невідомий тип замовлення")
+     if not items:
+@@ -205,11 +207,18 @@
+     if discount_tiers and order_type in DISCOUNT_ORDER_TYPES:      # знижка за сумою замовлення (опт): від суми товарів до знижки
+         auto_pct, auto_amount = discount_for(total, discount_tiers)
+         discount = money(Decimal(str(discount or 0)) + auto_amount)
++    promo_info = None
++    if promo:                                          # промокод: % від суми товарів, разом зі знижкою не більше суми замовлення
++        cut = min(promo_amount(total, promo["percent"]), max(money(total) - money(discount or 0), Decimal("0.00")))
++        discount = money(D(discount or 0) + cut)
++        promo_info = {"code": promo["code"], "percent": D(str(promo["percent"])), "amount": cut}
+     t = order_totals(lines, discount)                   # сума = товари − знижка; доставка Новою поштою не додається
+     profit = order_profit(lines, t["discount"])
+     doc = {"number": next_number(db), "customer": customer, "items": lines, "subtotal": t["subtotal"],
+            "discount": t["discount"], "discount_percent": auto_pct, "total": t["total"], "profit": profit, "order_type": order_type, "currency": "UAH", "status": "new", "notes": [], "created_by": admin,
+            "created_at": datetime.now(timezone.utc), "updated_at": datetime.now(timezone.utc)}
++    if promo_info:
++        doc["promo"] = promo_info
+     if extra:
+         doc.update(extra)
+     res = db.orders.insert_one(to_db(doc))
+--- a/backend/services/shop_settings.py
++++ b/backend/services/shop_settings.py
+@@ -38,6 +38,22 @@
+         return list(DEFAULT_TIERS)
+ 
+ 
++DEFAULT_REFERRAL_PERCENT = 3
++
++
++def get_referral(db) -> dict:
++    """Реферальні знижки, %: reward — запрошувачу (коли друг отримав перше замовлення), friend — запрошеному. 0 = вимкнено."""
++    s = db.settings.find_one({"_id": "general"}) or {}
++
++    def pct(key: str) -> int:
++        try:
++            v = int(float(str(s.get(key)).replace(",", ".").strip()))
++        except (TypeError, ValueError):
++            return DEFAULT_REFERRAL_PERCENT
++        return v if 0 <= v <= 100 else DEFAULT_REFERRAL_PERCENT
++    return {"reward": pct("referral_reward_percent"), "friend": pct("referral_friend_percent")}
++
++
+ def get_shop(db) -> dict:
+     s = db.settings.find_one({"_id": "general"}) or {}
+     return {
+--- /dev/null
++++ b/backend/services/promo.py
+@@ -0,0 +1,128 @@
++"""Промокоди: відсоток знижки на суму товарів у замовленні.
++
++Чиста логіка (normalize_*, check, amount) не залежить від БД. Кілька коротких операцій з колекцією
++`promo_codes` (create_code / redeem / release) імпортують database ліниво, щоб логіку можна було тестувати без MongoDB.
++
++Документ: {_id: КОД, percent, active, kind, owner_tg_id, uses_left (None = без ліміту), used, used_by[], expires_at, created_at}.
++  kind = manual (створює адмін) | referral_friend (подарунок запрошеному) | referral_reward (нагорода тому, хто запросив).
++  owner_tg_id заданий -> код персональний, його може застосувати лише цей клієнт.
++Один клієнт може використати один і той самий код лише раз.
++"""
++import re
++import secrets
++from datetime import datetime, timezone
++from decimal import Decimal, InvalidOperation
++
++from .pricing import D, money
++
++ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"        # без 0/O та 1/I/L, щоб код легко читався й диктувався
++CODE_RE = re.compile(r"[A-Z0-9А-ЯІЇЄҐ_-]{3,32}")
++
++
++class PromoError(ValueError):
++    pass
++
++
++def normalize_code(raw) -> str:
++    code = re.sub(r"\s+", "", str(raw or "")).upper()
++    if not CODE_RE.fullmatch(code):
++        raise PromoError("Код: 3–32 символи (літери, цифри, - або _)")
++    return code
++
++
++def normalize_percent(raw) -> Decimal:
++    try:
++        p = D(str(raw).replace(",", ".").strip())
++    except (InvalidOperation, ValueError):
++        raise PromoError("Знижка має бути числом")
++    if not p.is_finite() or not 0 < p <= 100:
++        raise PromoError("Знижка має бути від 0 до 100 %")
++    q = p.quantize(Decimal("0.01"))
++    return q.to_integral_value() if q == q.to_integral_value() else q.normalize()
++
++
++def generate_code(prefix: str = "REF") -> str:
++    return f"{prefix}-" + "".join(secrets.choice(ALPHABET) for _ in range(6))
++
++
++def _aware(d):
++    return d.replace(tzinfo=timezone.utc) if d is not None and d.tzinfo is None else d
++
++
++def check(doc: dict | None, tg_id: int, now: datetime | None = None) -> Decimal:
++    """Чи може клієнт tg_id застосувати цей код зараз. -> відсоток знижки; інакше PromoError з текстом для покупця."""
++    if not doc:
++        raise PromoError("Промокод не знайдено")
++    if not doc.get("active", True):
++        raise PromoError("Цей промокод більше не діє")
++    exp = _aware(doc.get("expires_at"))
++    if exp is not None and exp < (now or datetime.now(timezone.utc)):
++        raise PromoError("Термін дії промокоду минув")
++    owner = doc.get("owner_tg_id")
++    if owner is not None and owner != tg_id:
++        raise PromoError("Цей промокод призначений іншому клієнту")
++    if tg_id in (doc.get("used_by") or []):
++        raise PromoError("Ви вже використовували цей промокод")
++    left = doc.get("uses_left")
++    if left is not None and left <= 0:
++        raise PromoError("Цей промокод уже використано")
++    return D(str(doc["percent"]))
++
++
++def amount(subtotal, percent) -> Decimal:
++    """Сума знижки в грн (округлення до копійок)."""
++    return money(D(subtotal) * D(str(percent)) / 100)
++
++
++# ---------- операції з БД ----------
++
++def create_code(db, *, percent, code: str | None = None, max_uses: int | None = None, expires_at: datetime | None = None,
++                owner_tg_id: int | None = None, kind: str = "manual", prefix: str = "REF") -> dict:
++    from pymongo.errors import DuplicateKeyError
++    from ..database import to_db
++    pct = normalize_percent(percent)
++    for _ in range(5 if code is None else 1):
++        c = normalize_code(code) if code else generate_code(prefix)
++        doc = {"_id": c, "percent": pct, "active": True, "kind": kind, "owner_tg_id": owner_tg_id,
++               "uses_left": max_uses, "max_uses": max_uses, "used": 0, "used_by": [], "expires_at": expires_at,
++               "created_at": datetime.now(timezone.utc)}
++        try:
++            db.promo_codes.insert_one(to_db(doc))
++            return doc
++        except DuplicateKeyError:
++            if code:
++                raise PromoError("Такий промокод уже існує")
++    raise PromoError("Не вдалося згенерувати унікальний код, спробуйте ще раз")
++
++
++def lookup(db, raw) -> dict | None:
++    from ..database import load
++    try:
++        code = normalize_code(raw)
++    except PromoError:
++        return None
++    d = db.promo_codes.find_one({"_id": code})
++    return load(d) if d else None
++
++
++def redeem(db, raw, tg_id: int) -> dict:
++    """Перевіряє код і атомарно «бере» одне використання (двоє одночасно не використають одноразовий код).
++    -> {code, percent, limited}. Якщо замовлення не створилось — викличте release()."""
++    doc = lookup(db, raw)
++    percent = check(doc, tg_id)
++    limited = doc.get("uses_left") is not None
++    flt = {"_id": doc["_id"], "active": True, "used_by": {"$ne": tg_id}, "uses_left": {"$gt": 0} if limited else None}
++    upd = {"$inc": {"used": 1, **({"uses_left": -1} if limited else {})}, "$addToSet": {"used_by": tg_id}}
++    if db.promo_codes.find_one_and_update(flt, upd) is None:
++        raise PromoError("Цей промокод уже використано")
++    return {"code": doc["_id"], "percent": percent, "limited": limited}
++
++
++def release(db, redeemed: dict, tg_id: int) -> None:
++    """Повертає використання, якщо замовлення не вдалося оформити."""
++    try:
++        db.promo_codes.update_one({"_id": redeemed["code"], "used_by": tg_id},
++                                  {"$inc": {"used": -1, **({"uses_left": 1} if redeemed.get("limited") else {})},
++                                   "$pull": {"used_by": tg_id}})
++    except Exception:       # повернення не критичне: помилка оформлення важливіша
++        pass
+--- /dev/null
++++ b/backend/services/referral.py
+@@ -0,0 +1,93 @@
++"""Дуже проста реферальна програма.
++
++1. У кожного клієнта є своє посилання: https://t.me/<бот>?start=ref_<його telegram id> (екран «Запросити друга» в Mini App).
++2. Друг відкриває бота за посиланням -> запам'ятовуємо, хто його запросив (один раз, не себе, лише поки в нього немає замовлень).
++   Друг одразу отримує одноразовий персональний промокод (знижка referral_friend_percent).
++3. Коли перше замовлення друга отримує статус «Виконане» — запрошувач отримує свій одноразовий промокод
++   (знижка referral_reward_percent) і повідомлення в Telegram. Нагорода видається один раз за кожного друга.
++Нагорода — це звичайний промокод (services/promo.py): окремого балансу чи бонусних рахунків немає.
++"""
++from datetime import datetime, timezone
++
++from . import promo
++from .shop_settings import get_referral
++from .telegram_api import tg_call
++
++_username: str | None = None
++
++
++def parse_start(payload: str) -> int | None:
++    """'ref_12345' -> 12345; все інше -> None."""
++    p = (payload or "").strip()
++    if p.startswith("ref_") and p[4:].isdigit() and 0 < int(p[4:]) < 2 ** 53:
++        return int(p[4:])
++    return None
++
++
++def bot_username() -> str:
++    """BOT_USERNAME з .env, інакше один раз питаємо Telegram (getMe) і запам'ятовуємо."""
++    global _username
++    from ..config import settings
++    if settings.bot_username:
++        return settings.bot_username
++    if _username is None:
++        res = tg_call("getMe")
++        if res.get("ok"):
++            _username = str((res.get("result") or {}).get("username") or "")
++    return _username or ""
++
++
++def link_for(uid: int) -> str:
++    name = bot_username()
++    return f"https://t.me/{name}?start=ref_{uid}" if name else ""
++
++
++def attach(db, invitee_id: int, referrer_id: int, now: datetime | None = None) -> dict | None:
++    """Фіксує запрошення. -> {code, percent} (подарунковий код другу) або None, якщо запрошення не зараховано."""
++    if referrer_id == invitee_id or invitee_id <= 0 or referrer_id <= 0:
++        return None
++    if not db.users.find_one({"_id": referrer_id}, {"_id": 1}):
++        return None
++    if db.orders.count_documents({"customer.tg_id": invitee_id}) > 0:
++        return None                                     # запрошення діє лише для тих, хто ще нічого не замовляв
++    r = db.users.update_one({"_id": invitee_id, "referred_by": {"$exists": False}},
++                            {"$set": {"referred_by": referrer_id, "referred_at": now or datetime.now(timezone.utc)}})
++    if r.modified_count != 1:
++        return None                                     # уже запрошений раніше (або користувача немає)
++    pct = get_referral(db)["friend"]
++    if pct <= 0:
++        return None
++    doc = promo.create_code(db, percent=pct, max_uses=1, owner_tg_id=invitee_id, kind="referral_friend")
++    return {"code": doc["_id"], "percent": pct}
++
++
++def reward_on_done(db, order: dict, call=tg_call) -> dict | None:
++    """Викликається, коли замовлення стало «Виконане». Перше виконане замовлення запрошеного -> код запрошувачу."""
++    uid = (order.get("customer") or {}).get("tg_id")
++    if not isinstance(uid, int) or uid <= 0:
++        return None
++    u = db.users.find_one_and_update(
++        {"_id": uid, "referred_by": {"$exists": True}, "referral_rewarded": {"$ne": True}},
++        {"$set": {"referral_rewarded": True, "referral_rewarded_at": datetime.now(timezone.utc), "referral_order": order.get("number")}})
++    if not u:
++        return None
++    pct = get_referral(db)["reward"]
++    if pct <= 0:
++        return None
++    referrer = u["referred_by"]
++    doc = promo.create_code(db, percent=pct, max_uses=1, owner_tg_id=referrer, kind="referral_reward")
++    call("sendMessage", {"chat_id": referrer, "text": (
++        f"🎉 Ваш друг зробив перше замовлення!\n\nДякуємо, що запросили. Ваш промокод: {doc['_id']}\n"
++        f"Знижка {pct:g}% на наступне замовлення — введіть його при оформленні.")})
++    return {"referrer_id": referrer, "code": doc["_id"], "percent": pct}
++
++
++def stats(db, uid: int) -> dict:
++    """Дані для екрана «Запросити друга»."""
++    from ..database import load
++    cfg = get_referral(db)
++    codes = [{"code": c["_id"], "percent": float(load(c)["percent"])}
++             for c in db.promo_codes.find({"owner_tg_id": uid, "active": True, "used": 0}).sort("created_at", -1).limit(20)]
++    return {"link": link_for(uid), "invited": db.users.count_documents({"referred_by": uid}),
++            "rewarded": db.users.count_documents({"referred_by": uid, "referral_rewarded": True}),
++            "reward_percent": cfg["reward"], "friend_percent": cfg["friend"], "codes": codes}
+--- /dev/null
++++ b/backend/routes/promo.py
+@@ -0,0 +1,59 @@
++"""Промокоди в dashboard: створити, вимкнути/увімкнути, видалити. Персональні коди рефералки тут не показуються."""
++from datetime import datetime, timezone
++
++from fastapi import APIRouter, Depends, HTTPException
++
++from ..auth.security import audit, current_admin
++from ..database import get_db, public
++from ..models.schemas import PromoActiveIn, PromoCodeIn
++from ..services import promo as svc
++
++router = APIRouter(prefix="/api/promo", tags=["promo"])
++
++
++def _view(doc: dict) -> dict:
++    d = public(doc)
++    d.pop("used_by", None)
++    return d
++
++
++@router.get("")
++def list_codes(db=Depends(get_db), _=Depends(current_admin)):
++    rows = db.promo_codes.find({"kind": "manual"}).sort("created_at", -1).limit(200)
++    return {"items": [_view(r) for r in rows]}
++
++
++@router.post("", status_code=201)
++def create(body: PromoCodeIn, db=Depends(get_db), admin=Depends(current_admin)):
++    expires = None
++    if body.expires:
++        try:
++            d = datetime.strptime(body.expires, "%Y-%m-%d")
++        except ValueError:
++            raise HTTPException(422, "Дата у форматі РРРР-ММ-ДД")
++        expires = d.replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)      # діє весь останній день
++    try:
++        doc = svc.create_code(db, percent=body.percent, code=(body.code or "").strip() or None, max_uses=body.max_uses,
++                              expires_at=expires, prefix="PROMO")
++    except svc.PromoError as e:
++        raise HTTPException(422, str(e))
++    audit(db, admin, "promo.create", {"code": doc["_id"], "percent": str(doc["percent"])})
++    return _view(doc)
++
++
++@router.patch("/{code}")
++def set_active(code: str, body: PromoActiveIn, db=Depends(get_db), admin=Depends(current_admin)):
++    r = db.promo_codes.update_one({"_id": code.upper(), "kind": "manual"}, {"$set": {"active": body.active}})
++    if not r.matched_count:
++        raise HTTPException(404, "Промокод не знайдено")
++    audit(db, admin, "promo.active", {"code": code.upper(), "active": body.active})
++    return {"ok": True}
++
++
++@router.delete("/{code}")
++def delete(code: str, db=Depends(get_db), admin=Depends(current_admin)):
++    r = db.promo_codes.delete_one({"_id": code.upper(), "kind": "manual"})
++    if not r.deleted_count:
++        raise HTTPException(404, "Промокод не знайдено")
++    audit(db, admin, "promo.delete", {"code": code.upper()})
++    return {"ok": True}
+--- /dev/null
++++ b/tests/test_promo.py
+@@ -0,0 +1,74 @@
++"""Промокоди: чиста логіка (без БД)."""
++from datetime import datetime, timedelta, timezone
++from decimal import Decimal
++
++from backend.services import promo as pr
++from backend.services import referral
++
++NOW = datetime(2026, 10, 24, 12, 0, tzinfo=timezone.utc)
++
++
++def doc(**kw):
++    d = {"_id": "SALE10", "percent": Decimal("10"), "active": True, "owner_tg_id": None, "uses_left": None, "used_by": [], "expires_at": None}
++    d.update(kw)
++    return d
++
++
++def bad(d, uid=1, text=""):
++    try:
++        pr.check(d, uid, NOW)
++    except pr.PromoError as e:
++        assert text in str(e), str(e)
++        return
++    assert False, "очікувалась помилка"
++
++
++def test_normalize_code_uppercases_and_strips_spaces():
++    assert pr.normalize_code(" sale 10 ") == "SALE10"
++    assert pr.normalize_code("знижка-5") == "ЗНИЖКА-5"
++    for x in ("ab", "", "a" * 33, "sale!", None):
++        try:
++            pr.normalize_code(x); assert False, x
++        except pr.PromoError:
++            pass
++
++
++def test_normalize_percent_bounds():
++    assert pr.normalize_percent("10") == Decimal("10") and pr.normalize_percent("2,5") == Decimal("2.5")
++    for x in ("0", "-1", "101", "abc", "nan", ""):
++        try:
++            pr.normalize_percent(x); assert False, x
++        except pr.PromoError:
++            pass
++
++
++def test_check_ok_returns_percent():
++    assert pr.check(doc(), 1, NOW) == Decimal("10")
++    assert pr.check(doc(uses_left=3, owner_tg_id=1), 1, NOW) == Decimal("10")
++
++
++def test_check_rejects_unknown_disabled_expired():
++    bad(None, text="не знайдено")
++    bad(doc(active=False), text="не діє")
++    bad(doc(expires_at=NOW - timedelta(seconds=1)), text="Термін")
++    assert pr.check(doc(expires_at=NOW + timedelta(days=1)), 1, NOW)
++    assert pr.check(doc(expires_at=datetime(2026, 12, 1)), 1, NOW)         # дата без таймзони (mongomock) теж працює
++
++
++def test_check_rejects_foreign_personal_code_reuse_and_exhausted():
++    bad(doc(owner_tg_id=2), uid=1, text="іншому клієнту")
++    bad(doc(used_by=[1]), uid=1, text="вже використовували")
++    bad(doc(uses_left=0), text="уже використано")
++
++
++def test_amount_rounds_to_kopecks_and_generated_code_is_readable():
++    assert pr.amount(2646, Decimal("10")) == Decimal("264.60")
++    assert pr.amount("1000.01", 3) == Decimal("30.00")
++    c = pr.generate_code("REF")
++    assert c.startswith("REF-") and len(c) == 10 and not set(c[4:]) & set("0O1IL")
++
++
++def test_referral_start_payload_parsing():
++    assert referral.parse_start("ref_12345") == 12345
++    for x in ("", "ref_", "ref_abc", "ref_-5", "ref_0", "promo_1", "ref_1; drop"):
++        assert referral.parse_start(x) is None, x
+--- /dev/null
++++ b/tests/test_promo_referral.py
+@@ -0,0 +1,123 @@
++"""Промокоди й рефералка поверх MongoDB (mongomock) + API Mini App. Потребує: pip install -r requirements-dev.txt"""
++from decimal import Decimal
++
++import pytest
++
++pytest.importorskip("mongomock")
++import mongomock  # noqa: E402
++
++from backend.services import promo, referral  # noqa: E402
++from tests.test_shop_api import _order, env, hdr  # noqa: E402,F401  (env — fixture з test_shop_api)
++
++
++@pytest.fixture()
++def db():
++    return mongomock.MongoClient().db
++
++
++def test_one_time_code_can_be_redeemed_once_and_released(db):
++    promo.create_code(db, percent=5, code="ONCE", max_uses=1)
++    r = promo.redeem(db, "once", 1)
++    assert r["code"] == "ONCE" and r["percent"] == Decimal("5")
++    with pytest.raises(promo.PromoError):
++        promo.redeem(db, "ONCE", 2)                      # ліміт вичерпано
++    promo.release(db, r, 1)                              # замовлення не вийшло -> код знову вільний
++    assert promo.redeem(db, "ONCE", 2)["code"] == "ONCE"
++
++
++def test_same_customer_cannot_reuse_unlimited_code(db):
++    promo.create_code(db, percent=10, code="SALE10")
++    promo.redeem(db, "SALE10", 1)
++    with pytest.raises(promo.PromoError):
++        promo.redeem(db, "SALE10", 1)
++    assert promo.redeem(db, "SALE10", 2)["code"] == "SALE10"
++
++
++def test_duplicate_code_rejected(db, monkeypatch):
++    promo.create_code(db, percent=10, code="DUP")
++    with pytest.raises(promo.PromoError):
++        promo.create_code(db, percent=10, code="dup")
++
++
++def _users(db, *ids):
++    for i in ids:
++        db.users.insert_one({"_id": i})
++
++
++def test_referral_attach_is_one_time_and_not_self(db):
++    _users(db, 1, 2, 3)
++    assert referral.attach(db, 1, 1) is None                    # не себе
++    gift = referral.attach(db, 2, 1)
++    assert gift and gift["code"].startswith("REF-") and gift["percent"] == 3
++    assert db.users.find_one({"_id": 2})["referred_by"] == 1
++    assert referral.attach(db, 2, 3) is None                    # вдруге запросити не можна
++    assert referral.attach(db, 4, 1) is None                    # невідомий користувач (немає запису)
++
++
++def test_referral_not_counted_for_customers_with_orders(db):
++    _users(db, 1, 2)
++    db.orders.insert_one({"number": "X", "customer": {"tg_id": 2}})
++    assert referral.attach(db, 2, 1) is None
++
++
++def test_referrer_rewarded_once_after_first_done_order(db):
++    _users(db, 1, 2)
++    referral.attach(db, 2, 1)
++    sent = []
++    call = lambda m, p=None, **kw: sent.append((m, p)) or {"ok": True}      # noqa: E731
++    order = {"number": "ORD-1", "customer": {"tg_id": 2}}
++    res = referral.reward_on_done(db, order, call=call)
++    assert res["referrer_id"] == 1 and res["percent"] == 3
++    assert sent[0][1]["chat_id"] == 1 and res["code"] in sent[0][1]["text"]
++    assert db.promo_codes.find_one({"_id": res["code"]})["owner_tg_id"] == 1
++    assert referral.reward_on_done(db, {"number": "ORD-2", "customer": {"tg_id": 2}}, call=call) is None   # лише за перше
++    assert referral.reward_on_done(db, {"number": "ORD-3", "customer": {"tg_id": 9}}, call=call) is None   # не запрошений
++
++
++def test_referral_percent_zero_disables_rewards(db):
++    db.settings.insert_one({"_id": "general", "referral_reward_percent": 0, "referral_friend_percent": 0})
++    _users(db, 1, 2)
++    assert referral.attach(db, 2, 1) is None                    # запрошення записано, але подарунка немає
++    assert referral.reward_on_done(db, {"number": "A", "customer": {"tg_id": 2}}, call=lambda *a, **k: {"ok": True}) is None
++    assert db.promo_codes.count_documents({}) == 0
++
++
++def test_order_with_promo_applies_percent_and_blocks_second_use(env):
++    c, db = env
++    promo.create_code(db, percent=10, code="SALE10")
++    r = c.post("/api/shop/orders", json=_order(db.ids[0], 3, promo_code="sale10"), headers=hdr(42))
++    assert r.status_code == 201 and r.json()["total"] == 2381.40            # 2646 − 10 % = 264.60
++    o = db.orders.find_one({"number": r.json()["number"]})
++    assert o["promo"]["code"] == "SALE10" and str(o["discount"]) == "264.60"
++    again = c.post("/api/shop/orders", json=_order(db.ids[0], 3, promo_code="SALE10"), headers=hdr(42))
++    assert again.status_code == 422 and "вже використовували" in again.json()["detail"]
++
++
++def test_failed_order_does_not_burn_one_time_code(env):
++    c, db = env
++    promo.create_code(db, percent=10, code="ONCE", max_uses=1)
++    low = c.post("/api/shop/orders", json=_order(db.ids[0], 1, promo_code="ONCE"), headers=hdr(42))      # нижче мінімуму
++    assert low.status_code == 422
++    assert db.promo_codes.find_one({"_id": "ONCE"})["uses_left"] == 1
++    assert c.post("/api/shop/orders", json=_order(db.ids[0], 3, promo_code="ONCE"), headers=hdr(42)).status_code == 201
++
++
++def test_promo_check_and_personal_code_is_private(env):
++    c, db = env
++    promo.create_code(db, percent=5, code="MINE", owner_tg_id=42, max_uses=1)
++    ok = c.post("/api/shop/promo/check", json={"code": "mine"}, headers=hdr(42))
++    assert ok.status_code == 200 and ok.json() == {"code": "MINE", "percent": 5.0}
++    assert c.post("/api/shop/promo/check", json={"code": "MINE"}, headers=hdr(43)).status_code == 422
++    assert c.post("/api/shop/promo/check", json={"code": "NOPE"}, headers=hdr(42)).status_code == 422
++    assert db.promo_codes.find_one({"_id": "MINE"})["used"] == 0              # перевірка код не «спалює»
++
++
++def test_referral_screen_returns_link_stats_and_codes(env, monkeypatch):
++    c, db = env
++    monkeypatch.setenv("BOT_USERNAME", "my_shop_bot")
++    db.users.insert_one({"_id": 42})
++    db.users.insert_one({"_id": 50, "referred_by": 42})
++    promo.create_code(db, percent=3, owner_tg_id=42, max_uses=1, kind="referral_reward")
++    r = c.get("/api/shop/referral", headers=hdr(42)).json()
++    assert r["link"] == "https://t.me/my_shop_bot?start=ref_42" and r["invited"] == 1 and r["rewarded"] == 0
++    assert r["reward_percent"] == 3 and len(r["codes"]) == 1

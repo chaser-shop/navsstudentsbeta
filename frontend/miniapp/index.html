@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#06070a">
+<meta name="color-scheme" content="dark">
+<title>Bob Smoke</title>
+<link rel="icon" type="image/png" href="img/favicon.png">
+<link rel="apple-touch-icon" href="img/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<!-- Telegram Web Apps SDK: у звичайному браузері застосунок працює без нього (потрібен MINIAPP_DEV_MODE=1 на сервері). -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+<main id="view"></main>
+<div id="bar"></div>
+<nav id="nav" aria-label="Навігація"><div id="tabs"></div></nav>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="subgate" class="hide" role="dialog" aria-modal="true" aria-label="Підписка на канал"></div>
+<div id="modegate" class="hide" role="dialog" aria-modal="true" aria-label="Вхід до магазину"></div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

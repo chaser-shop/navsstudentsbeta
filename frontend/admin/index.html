@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#06070a">
+<title>Bob Smoke · Керування</title>
+<link rel="icon" href="img/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <symbol id="i-dashboard" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-userplus" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></symbol>
+  <symbol id="i-userx" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" x2="22" y1="8" y2="13"/><line x1="22" x2="17" y1="8" y2="13"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="i-megaphone" viewBox="0 0 24 24"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+  <symbol id="i-store" viewBox="0 0 24 24"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/><path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-chevr" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-chevd" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+  <symbol id="i-sheet" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 13h2"/><path d="M14 13h2"/><path d="M8 17h2"/><path d="M14 17h2"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></symbol>
+  <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="i-cart" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></symbol>
+  <symbol id="i-quote" viewBox="0 0 24 24"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+  <symbol id="i-bold" viewBox="0 0 24 24"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></symbol>
+  <symbol id="i-italic" viewBox="0 0 24 24"><line x1="19" x2="10" y1="4" y2="4"/><line x1="14" x2="5" y1="20" y2="20"/><line x1="15" x2="9" y1="4" y2="20"/></symbol>
+  <symbol id="i-underline" viewBox="0 0 24 24"><path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" x2="20" y1="20" y2="20"/></symbol>
+  <symbol id="i-strike" viewBox="0 0 24 24"><path d="M16 4H9a3 3 0 0 0-2.83 4"/><path d="M14 12a4 4 0 0 1 0 8H6"/><line x1="4" x2="20" y1="12" y2="12"/></symbol>
+  <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M2 9a3 3 0 1 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 1 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M9 9h.01"/><path d="m15 9-6 6"/><path d="M15 15h.01"/></symbol>
+  <symbol id="i-percent" viewBox="0 0 24 24"><line x1="19" x2="5" y1="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></symbol>
+  <symbol id="i-trendup" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></symbol>
+  <symbol id="i-trenddown" viewBox="0 0 24 24"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></symbol>
+  <symbol id="i-truck" viewBox="0 0 24 24"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/></symbol>
+  <symbol id="i-move" viewBox="0 0 24 24"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></symbol>
+</svg>
+
+<!-- Вхід -->
+<div id="login" class="login hide">
+  <form id="loginForm" class="login-card" autocomplete="on">
+    <img class="login-logo" src="img/logo.png" alt="Bob Smoke" width="88" height="88">
+    <h1>Вхід у керування</h1>
+    <p class="login-sub">Увійдіть, щоб керувати магазином</p>
+    <label class="fld"><span>Логін</span><input class="inp" name="username" autocomplete="username" required></label>
+    <label class="fld"><span>Пароль</span><input class="inp" name="password" type="password" autocomplete="current-password" required></label>
+    <p class="err" id="loginErr" role="alert"></p>
+    <button class="btn primary lg" id="loginBtn" type="submit">Увійти</button>
+  </form>
+</div>
+
+<!-- Завантаження панелі / помилка запуску -->
+<div id="boot" class="login hide">
+  <div class="login-card">
+    <img class="login-logo" src="img/logo.png" alt="" width="88" height="88">
+    <div id="bootLoad" class="boot-load"><span class="spin" aria-hidden="true"></span><span>Завантаження…</span></div>
+    <div id="bootErr" class="boot-err hide">
+      <h1>Не вдалося завантажити панель</h1>
+      <p class="login-sub" id="bootMsg"></p>
+      <div class="boot-act"><button type="button" class="btn primary" id="bootRetry">Спробувати ще раз</button><button type="button" class="btn" id="bootLogout">Вийти</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="app" class="app hide" data-view="overview">
+  <aside class="sidebar" aria-label="Головне меню">
+    <a class="brand" href="#overview" data-tab-link="overview">
+      <img class="brand-logo" src="img/logo.png" alt="">
+      <span class="brand-txt"><b id="brandName">Bob Smoke</b><small>Панель керування</small></span>
+    </a>
+    <nav class="nav" id="tabs" aria-label="Розділи">
+      <div class="nav-group">
+        <p class="nav-title">Робота</p>
+        <button type="button" data-tab="overview" class="on"><svg class="i" aria-hidden="true"><use href="#i-dashboard"/></svg><span>Огляд</span></button>
+        <button type="button" data-tab="analytics"><svg class="i" aria-hidden="true"><use href="#i-chart"/></svg><span>Аналітика</span></button>
+        <button type="button" data-tab="orders"><svg class="i" aria-hidden="true"><use href="#i-bag"/></svg><span>Замовлення</span><i class="cnt hide" id="ordCnt" data-cnt="ord"></i></button>
+        <button type="button" data-tab="chats"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg><span>Чати</span><i class="cnt hide" id="chatCnt" data-cnt="chat"></i></button>
+      </div>
+      <div class="nav-group">
+        <p class="nav-title">Каталог</p>
+        <button type="button" data-tab="products"><svg class="i" aria-hidden="true"><use href="#i-box"/></svg><span>Товари</span></button>
+        <button type="button" data-tab="lines"><svg class="i" aria-hidden="true"><use href="#i-layers"/></svg><span>Категорії та лінійки</span></button>
+      </div>
+      <div class="nav-group">
+        <p class="nav-title">Клієнти</p>
+        <button type="button" data-tab="users"><svg class="i" aria-hidden="true"><use href="#i-users"/></svg><span>Клієнти</span></button>
+        <button type="button" data-tab="referrals"><svg class="i" aria-hidden="true"><use href="#i-userplus"/></svg><span>Реферали</span></button>
+        <button type="button" data-tab="broadcast"><svg class="i" aria-hidden="true"><use href="#i-megaphone"/></svg><span>Розсилки</span></button>
+      </div>
+      <div class="nav-group">
+        <p class="nav-title">Система</p>
+        <button type="button" data-tab="settings"><svg class="i" aria-hidden="true"><use href="#i-settings"/></svg><span>Налаштування</span></button>
+      </div>
+    </nav>
+    <div class="side-foot">
+      <a class="nav-link" href="/app/" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="#i-store"/></svg><span>Відкрити магазин</span><svg class="i nl-ext" aria-hidden="true"><use href="#i-external"/></svg></a>
+      <div class="me">
+        <span class="me-av" id="meAv" aria-hidden="true">А</span>
+        <span class="me-t"><b id="meName">Адміністратор</b><small>Ви увійшли</small></span>
+        <button type="button" class="btn icon ghost" id="logout" data-logout title="Вийти" aria-label="Вийти"><svg class="i" aria-hidden="true"><use href="#i-logout"/></svg></button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <a class="tb-logo" href="#overview" data-tab-link="overview" aria-label="Огляд"><img src="img/logo.png" alt=""></a>
+      <h1 id="topTitle">Огляд</h1>
+      <span class="grow"></span>
+      <a class="btn icon ghost" href="/app/" target="_blank" rel="noopener" title="Відкрити магазин" aria-label="Відкрити магазин"><svg class="i" aria-hidden="true"><use href="#i-store"/></svg></a>
+    </header>
+
+    <div class="pagehead">
+      <div class="ph-t"><h1 id="pageTitle">Огляд</h1><p id="pageSub">Стан магазину просто зараз</p></div>
+      <div class="pageact hide" id="pageAct">
+        <button type="button" class="btn" id="syncBtn" title="Завантажте Excel постачальника: програма запропонує зміни, а ви підтверджуєте кожну"><svg class="i" aria-hidden="true"><use href="#i-sheet"/></svg>Оновити з Excel</button>
+        <button type="button" class="btn primary" id="addBtn"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg>Додати товар</button>
+      </div>
+    </div>
+
+    <main class="content" id="content">
+
+      <!-- Огляд -->
+      <section id="overviewView" class="view">
+        <div class="kpis">
+          <article class="kpi" id="kpiRevenue"></article>
+          <article class="kpi" id="kpiOrders"></article>
+          <article class="kpi" id="kpiUsers"></article>
+          <article class="kpi" id="kpiProducts"></article>
+        </div>
+        <div class="dash-grid">
+          <section class="card span2 chart-card">
+            <header class="card-h"><div><h2>Продажі за 30 днів</h2><p class="small" id="ovUpdated"></p></div>
+              <div class="seg sm" id="ovMetric" role="group" aria-label="Показник графіка"><button type="button" data-m="revenue" class="on">Виручка</button><button type="button" data-m="orders">Замовлення</button></div></header>
+            <div id="ovChart" class="chart-box"></div>
+            <div class="mini-row" id="ovChartFoot"></div>
+          </section>
+          <section class="card">
+            <header class="card-h"><h2>Потребує уваги</h2></header>
+            <div id="ovAttention"></div>
+          </section>
+          <section class="card span2">
+            <header class="card-h"><h2>Останні замовлення</h2><button type="button" class="btn sm ghost" data-tab="orders">Усі замовлення<svg class="i" aria-hidden="true"><use href="#i-chevr"/></svg></button></header>
+            <div id="ovOrders" class="ov-list"></div>
+          </section>
+          <section class="card">
+            <header class="card-h"><h2>Статуси замовлень</h2><span class="small">за весь час</span></header>
+            <div id="ovStatus"></div>
+          </section>
+          <section class="card">
+            <header class="card-h"><h2>Товари в наявності</h2><button type="button" class="btn sm ghost" data-tab="lines">Категорії<svg class="i" aria-hidden="true"><use href="#i-chevr"/></svg></button></header>
+            <div id="ovCats"></div>
+          </section>
+          <section class="card">
+            <header class="card-h"><h2>Остання активність</h2></header>
+            <div id="ovActivity"></div>
+          </section>
+          <div class="ov-side">
+            <section class="card">
+              <header class="card-h"><h2>Розсилка</h2><button type="button" class="btn sm ghost" data-tab="broadcast">Відкрити<svg class="i" aria-hidden="true"><use href="#i-chevr"/></svg></button></header>
+              <div id="ovBc"></div>
+            </section>
+            <section class="card">
+              <header class="card-h"><h2>Швидкі дії</h2></header>
+              <div class="shortcuts">
+                <button type="button" class="short" data-go="add"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg><span>Додати товар</span></button>
+                <button type="button" class="short" data-go="excel"><svg class="i" aria-hidden="true"><use href="#i-sheet"/></svg><span>Оновити з Excel</span></button>
+                <button type="button" class="short" data-tab="lines"><svg class="i" aria-hidden="true"><use href="#i-tag"/></svg><span>Ціни лінійок</span></button>
+                <button type="button" class="short" data-tab="broadcast"><svg class="i" aria-hidden="true"><use href="#i-megaphone"/></svg><span>Нова розсилка</span></button>
+                <button type="button" class="short" data-tab="analytics"><svg class="i" aria-hidden="true"><use href="#i-chart"/></svg><span>Аналітика</span></button>
+                <a class="short" href="/app/" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="#i-store"/></svg><span>Відкрити магазин</span></a>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- Аналітика -->
+      <section id="analyticsView" class="view hide">
+        <div class="toolbar an-bar">
+          <div class="seg" id="anPreset" role="group" aria-label="Період">
+            <button type="button" data-p="7">7 днів</button><button type="button" data-p="30" class="on">30 днів</button><button type="button" data-p="90">90 днів</button><button type="button" data-p="month">Цей місяць</button><button type="button" data-p="prev">Минулий місяць</button><button type="button" data-p="year">Рік</button>
+          </div>
+          <div class="an-dates">
+            <label class="fld inline"><span>Від</span><input type="date" id="anFrom" class="inp" aria-label="Початок періоду"></label>
+            <label class="fld inline"><span>До</span><input type="date" id="anTo" class="inp" aria-label="Кінець періоду"></label>
+            <button type="button" class="btn icon" id="anRefresh" title="Оновити" aria-label="Оновити аналітику"><svg class="i" aria-hidden="true"><use href="#i-refresh"/></svg></button>
+          </div>
+        </div>
+        <p class="err" id="anErr" role="alert"></p>
+        <p class="hint an-range" id="anRange"></p>
+        <div class="kpis kpis6" id="anKpis"></div>
+        <div class="dash-grid">
+          <section class="card span3 chart-card">
+            <header class="card-h"><h2>Динаміка</h2>
+              <div class="seg sm" id="anMetric" role="group" aria-label="Показник графіка"><button type="button" data-m="revenue" class="on">Виручка</button><button type="button" data-m="orders">Замовлення</button><button type="button" data-m="profit">Прибуток</button><button type="button" data-m="new_users">Нові клієнти</button></div></header>
+            <div id="anChart" class="chart-box"></div>
+          </section>
+          <section class="card"><header class="card-h"><h2>Статуси</h2></header><div id="anStatus"></div></section>
+          <section class="card"><header class="card-h"><h2>Опт і роздріб</h2></header><div id="anType"></div></section>
+          <section class="card"><header class="card-h"><h2>Способи оплати</h2></header><div id="anPay"></div></section>
+          <section class="card span2"><header class="card-h"><h2>Топ товарів</h2><span class="small">за сумою продажу</span></header><div id="anTop"></div></section>
+          <section class="card"><header class="card-h"><h2>Замовлення за днями тижня</h2></header><div id="anWeek"></div></section>
+          <section class="card"><header class="card-h"><h2>Категорії</h2></header><div id="anCats"></div></section>
+          <section class="card"><header class="card-h"><h2>Бренди</h2></header><div id="anBrands"></div></section>
+          <section class="card"><header class="card-h"><h2>Найкращі покупці</h2></header><div id="anCust"></div></section>
+        </div>
+      </section>
+
+      <!-- Товари -->
+      <section id="productsView" class="view hide">
+        <div class="toolbar tb-prod" id="tbProd">
+          <label class="search"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><input id="q" type="search" class="inp" placeholder="Назва, бренд, модель" aria-label="Пошук товарів" autocomplete="off"></label>
+          <button type="button" class="btn fbtn" id="fToggle" aria-expanded="false" aria-controls="fPanel"><svg class="i" aria-hidden="true"><use href="#i-filter"/></svg>Фільтри<i class="cnt hide" id="fCnt"></i></button>
+          <div class="filters" id="fPanel">
+            <select id="fCategory" class="inp" aria-label="Категорія"><option value="">Усі категорії</option></select>
+            <select id="fStatus" class="inp" aria-label="Наявність">
+              <option value="">Будь-яка наявність</option>
+              <option value="in_stock">В наявності</option>
+              <option value="expected">Очікується</option>
+              <option value="unavailable">Немає</option>
+            </select>
+            <select id="fSort" class="inp" aria-label="Сортування">
+              <option value="name">За назвою</option>
+              <option value="price_asc">Дешевші спершу</option>
+              <option value="price_desc">Дорожчі спершу</option>
+              <option value="hot">Хіти спершу</option>
+            </select>
+            <label class="tog"><input type="checkbox" id="fHot"><span><svg class="i" aria-hidden="true"><use href="#i-flame"/></svg>Лише хіти</span></label>
+            <label class="tog" title="Нові позиції з таблиці, яким ще потрібні фото"><input type="checkbox" id="fNew"><span><svg class="i" aria-hidden="true"><use href="#i-image"/></svg>Без фото (нові)</span></label>
+            <button type="button" class="chip-x hide" id="lineChip" title="Показати товари всіх лінійок"></button>
+          </div>
+        </div>
+        <input type="file" id="syncFile" accept=".xlsx" hidden>
+        <div class="banner hide" id="syncInfo"></div>
+        <p class="hint"><svg class="i" aria-hidden="true"><use href="#i-info"/></svg>Клацніть на ціну в таблиці, щоб змінити її. Усю лінійку одразу можна змінити в розділі «Категорії та лінійки».</p>
+        <div class="card tablecard">
+          <table class="table ptable" id="tbl">
+            <thead><tr><th class="t-img"></th><th>Товар</th><th class="t-cat">Лінійка</th><th class="t-stat">Наявність</th><th class="num">Опт, ₴</th><th class="num">Роздріб, ₴</th><th class="t-act"></th></tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div id="empty" class="empty hide"><span class="empty-ico"><svg class="i" aria-hidden="true"><use href="#i-inbox"/></svg></span><b>Нічого не знайдено</b><p>Змініть пошук чи фільтри або додайте новий товар.</p></div>
+        <nav class="pager" id="pager" aria-label="Сторінки"></nav>
+      </section>
+
+      <!-- Категорії та лінійки -->
+      <section id="linesView" class="view hide">
+        <section class="card">
+          <header class="card-h"><div><h2><svg class="i" aria-hidden="true"><use href="#i-layers"/></svg>Категорії</h2><p class="small">Назва, підпис і фото — так категорію бачать покупці. Націнка додається до закупівельної ціни кожного товару категорії.</p></div></header>
+          <div id="catGrid" class="cat-grid"></div>
+          <p class="hint"><svg class="i" aria-hidden="true"><use href="#i-info"/></svg>Набір категорій фіксований: від нього залежать ціни, групування каталогу й Mini App. Щоб перенести товар в іншу категорію чи лінійку, відкрийте його в розділі «Товари».</p>
+        </section>
+        <div class="sec-h"><h2><svg class="i" aria-hidden="true"><use href="#i-tag"/></svg>Лінійки</h2><p class="small">Товари однієї лінійки мають спільне фото в магазині, а ціни можна змінювати для всієї лінійки одразу. Натисніть на лінійку, щоб побачити її склад.</p></div>
+        <div class="toolbar">
+          <label class="search"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><input id="lq" type="search" class="inp" placeholder="Лінійка або бренд" aria-label="Пошук лінійки" autocomplete="off"></label>
+          <select id="lCat" class="inp" aria-label="Категорія"><option value="">Усі категорії</option></select>
+          <label class="tog"><input type="checkbox" id="lMixed"><span>Лише з різними цінами</span></label>
+        </div>
+        <div id="lList" class="lines"></div>
+        <div id="lEmpty" class="empty hide"><span class="empty-ico"><svg class="i" aria-hidden="true"><use href="#i-tag"/></svg></span><b>Лінійок не знайдено</b><p>Змініть пошук або фільтри.</p></div>
+      </section>
+
+      <!-- Замовлення -->
+      <section id="ordersView" class="view hide">
+        <div class="toolbar tb-prod ord-bar" id="oBar">
+          <div class="seg" id="oFilter" role="group" aria-label="Які замовлення показати"><button type="button" data-v="active" class="on">Активні</button><button type="button" data-v="">Усі</button></div>
+          <label class="search"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><input id="oq" type="search" class="inp" placeholder="Номер, імʼя, телефон, @нікнейм або ID" aria-label="Пошук замовлень" autocomplete="off"></label>
+          <button type="button" class="btn fbtn" id="oFToggle" aria-expanded="false" aria-controls="oFPanel"><svg class="i" aria-hidden="true"><use href="#i-filter"/></svg>Фільтри<i class="cnt hide" id="oFCnt"></i></button>
+          <button class="btn icon" id="oRefresh" type="button" aria-label="Оновити список" title="Оновити"><svg class="i" aria-hidden="true"><use href="#i-refresh"/></svg></button>
+          <div class="filters" id="oFPanel">
+            <select id="oStatus" class="inp" aria-label="Статус"></select>
+            <select id="oType" class="inp" aria-label="Тип замовлення"><option value="">Опт і роздріб</option><option value="wholesale">Лише опт</option><option value="retail">Лише роздріб</option></select>
+            <label class="fld inline"><span>Від</span><input type="date" id="oFrom" class="inp" aria-label="Дата від"></label>
+            <label class="fld inline"><span>До</span><input type="date" id="oTo" class="inp" aria-label="Дата до"></label>
+            <button type="button" class="btn ghost" id="oReset"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg>Скинути</button>
+          </div>
+        </div>
+        <div class="chips-row" id="oChips"></div>
+        <div class="card tablecard">
+          <table class="table otable" id="oTable">
+            <thead><tr><th>Замовлення</th><th>Клієнт</th><th>Склад</th><th>Оплата</th><th class="num">Сума</th><th>Статус</th><th class="o-go"><span class="sr">Відкрити</span></th></tr></thead>
+            <tbody id="oList"></tbody>
+          </table>
+        </div>
+        <div id="oEmpty" class="empty hide"><span class="empty-ico"><svg class="i" aria-hidden="true"><use href="#i-bag"/></svg></span><b>Замовлень не знайдено</b><p>Змініть пошук або фільтри. Нові замовлення з’являються тут одразу після оформлення в магазині.</p></div>
+        <nav class="pager" id="oPager" aria-label="Сторінки замовлень"></nav>
+      </section>
+
+      <!-- Чати -->
+      <section id="chatsView" class="view hide">
+        <div class="chatwrap" id="chatWrap">
+          <aside class="chatlist">
+            <label class="search"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><input id="cq" type="search" class="inp" placeholder="Імʼя, @нікнейм або ID" aria-label="Пошук чатів" autocomplete="off"></label>
+            <div id="cList" class="clist"></div>
+            <div id="cEmpty" class="empty hide"><span class="empty-ico"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg></span><b>Розмов ще немає</b><p>Повідомлення від покупців з’являться тут.</p></div>
+          </aside>
+          <section class="chatpane" id="chatPane">
+            <div class="chathead"><button class="btn icon ghost chatback" id="chatBack" type="button" aria-label="До списку чатів"><svg class="i" aria-hidden="true"><use href="#i-back"/></svg></button><div id="chatWho" class="chatwho">Оберіть чат зліва</div></div>
+            <div class="chatmsgs" id="chatMsgs"><div class="empty"><span class="empty-ico"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg></span><b>Оберіть розмову</b><p>Виберіть покупця зі списку, щоб прочитати переписку та відповісти.</p></div></div>
+            <form class="chatform hide" id="chatForm"><textarea id="chatText" class="inp" rows="1" maxlength="4000" placeholder="Напишіть повідомлення покупцю…" aria-label="Повідомлення покупцю"></textarea><button class="btn primary" type="submit" aria-label="Надіслати"><svg class="i" aria-hidden="true"><use href="#i-send"/></svg><span class="lbl">Надіслати</span></button><p class="chat-hint small">Enter — надіслати, Shift+Enter — новий рядок</p></form>
+          </section>
+        </div>
+      </section>
+
+      <!-- Користувачі -->
+      <section id="usersView" class="view hide">
+        <div class="stats" id="uStats"></div>
+        <div class="toolbar">
+          <label class="search"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><input id="uq" type="search" class="inp" placeholder="Імʼя, @нікнейм або Telegram ID" aria-label="Пошук клієнтів" autocomplete="off"></label>
+          <select id="uFilter" class="inp" aria-label="Фільтр клієнтів"><option value="">Усі клієнти</option><option value="cart">З активним кошиком</option><option value="orders">Зробили замовлення</option><option value="week">Заходили за 7 днів</option></select>
+          <button class="btn" id="uRefresh" type="button"><svg class="i" aria-hidden="true"><use href="#i-refresh"/></svg>Оновити</button>
+          <button class="btn" id="uSync" type="button" title="Telegram повідомляє про блокування бота одразу, а ця кнопка перевіряє всіх вручну"><svg class="i" aria-hidden="true"><use href="#i-userx"/></svg>Прибрати заблокованих</button>
+        </div>
+        <p class="hint" id="uSyncInfo"></p>
+        <div id="uList" class="ulist"></div>
+        <div id="uMore"></div>
+        <div id="uEmpty" class="empty hide"><span class="empty-ico"><svg class="i" aria-hidden="true"><use href="#i-users"/></svg></span><b>Клієнтів не знайдено</b><p>Змініть пошук або фільтр.</p></div>
+      </section>
+
+      <!-- Реферали -->
+      <section id="referralsView" class="view hide">
+        <div class="stats" id="rStats"></div>
+        <div class="toolbar seg-row">
+          <div class="seg" id="rPeriod" role="group" aria-label="Період"><button type="button" data-v="0" class="on">За весь час</button><button type="button" data-v="30">30 днів</button><button type="button" data-v="7">7 днів</button></div>
+          <button class="btn" id="rRefresh" type="button" aria-label="Оновити" title="Оновити"><svg class="i" aria-hidden="true"><use href="#i-refresh"/></svg><span class="lbl">Оновити</span></button>
+        </div>
+        <section class="card">
+          <header class="card-h"><h2><svg class="i" aria-hidden="true"><use href="#i-trophy"/></svg>Рейтинг запрошувачів</h2></header>
+          <div id="rList" class="rlist"><p class="hint">Завантаження…</p></div>
+        </section>
+        <section class="card">
+          <header class="card-h"><h2><svg class="i" aria-hidden="true"><use href="#i-history"/></svg>Останні запрошення</h2></header>
+          <div id="rRecent"></div>
+        </section>
+        <p class="hint"><svg class="i" aria-hidden="true"><use href="#i-info"/></svg>Рахуються люди, які зайшли в бота за реферальним посиланням. «Нагороджено» означає, що запрошений уже зробив виконане замовлення. Виручка — це сума виконаних замовлень запрошених.</p>
+      </section>
+
+      <!-- Розсилки -->
+      <section id="broadcastView" class="view hide">
+        <div class="bc">
+          <section class="card">
+            <header class="card-h"><div><h2>Нова розсилка</h2><p class="muted" id="bcInfo">Повідомлення отримають усі, хто зареєстрований у боті.</p></div></header>
+            <div class="fmtbar" id="bcBar" role="toolbar" aria-label="Форматування тексту">
+              <button type="button" data-f="b" title="Жирний (Ctrl+B)" aria-label="Жирний"><svg class="i" aria-hidden="true"><use href="#i-bold"/></svg></button>
+              <button type="button" data-f="i" title="Курсив (Ctrl+I)" aria-label="Курсив"><svg class="i" aria-hidden="true"><use href="#i-italic"/></svg></button>
+              <button type="button" data-f="u" title="Підкреслений (Ctrl+U)" aria-label="Підкреслений"><svg class="i" aria-hidden="true"><use href="#i-underline"/></svg></button>
+              <button type="button" data-f="s" title="Закреслений" aria-label="Закреслений"><svg class="i" aria-hidden="true"><use href="#i-strike"/></svg></button>
+              <button type="button" data-f="tg-spoiler" title="Спойлер: текст прихований, поки не натиснуть" aria-label="Спойлер"><svg class="i" aria-hidden="true"><use href="#i-eye"/></svg></button>
+              <button type="button" data-f="code" title="Моноширинний (код)" aria-label="Моноширинний"><svg class="i" aria-hidden="true"><use href="#i-code"/></svg></button>
+              <button type="button" data-f="blockquote" title="Цитата" aria-label="Цитата"><svg class="i" aria-hidden="true"><use href="#i-quote"/></svg></button>
+              <button type="button" data-f="a" title="Посилання" aria-label="Посилання"><svg class="i" aria-hidden="true"><use href="#i-link"/></svg></button>
+            </div>
+            <textarea id="bcText" class="inp" rows="12" maxlength="12000" aria-label="Текст розсилки" placeholder="Введіть текст розсилки (можна без тексту, якщо додано фото чи файл). Виділіть слово й натисніть кнопку форматування."></textarea>
+            <div class="bc-attach">
+              <input type="file" id="bcFile" multiple hidden>
+              <button class="btn" id="bcAttach" type="button"><svg class="i" aria-hidden="true"><use href="#i-clip"/></svg>Додати фото або файл</button>
+              <span class="small" id="bcAttachHint">До 10 файлів, кожен до 15 МБ. Фото JPG, PNG або WebP надсилаються як фото, решта — як файли.</span>
+              <div class="bc-files" id="bcFiles"></div>
+            </div>
+            <div class="bc-meta"><span id="bcCount">0 / 4096</span>
+              <label class="chk"><input type="checkbox" id="bcBtn"><span>Кнопка «Відкрити магазин» під повідомленням</span></label></div>
+            <p class="alert info hide" id="bcNote"><svg class="i" aria-hidden="true"><use href="#i-info"/></svg>Підпис до фото чи файлу в Telegram — до 1024 символів. Довший текст надійде окремим повідомленням одразу після файлів.</p>
+            <p class="alert bad hide" id="bcErr" role="alert"></p>
+            <div class="bc-ctl"><button class="btn" id="bcTest" type="button">Тест собі</button><button class="btn primary" id="bcSend" type="button"><svg class="i" aria-hidden="true"><use href="#i-send"/></svg>Надіслати всім</button></div>
+          </section>
+          <section class="card bc-prev">
+            <header class="card-h"><h2>Так побачать користувачі</h2></header>
+            <div class="tgbubble" id="bcPreview"><span class="muted">Тут з’явиться попередній перегляд</span></div>
+            <div class="tgbtn hide" id="bcBtnPrev"><svg class="i" aria-hidden="true"><use href="#i-store"/></svg>Відкрити магазин</div>
+          </section>
+        </div>
+        <section class="card hide" id="bcRunCard"><header class="card-h"><h2>Розсилка триває</h2></header><div id="bcRun"></div></section>
+        <section class="card"><header class="card-h"><h2>Історія розсилок</h2></header><div id="bcHist"><p class="hint">Завантаження…</p></div></section>
+      </section>
+
+      <!-- Налаштування -->
+      <section id="settingsView" class="view hide">
+        <form id="settingsForm" class="settings" autocomplete="off">
+          <section class="card set-card">
+            <header class="card-h"><div><h2>Магазин і головна сторінка</h2><p class="muted">Зміни одразу з’являться в магазині після оновлення каталогу.</p></div></header>
+            <div class="grid2">
+              <label class="fld"><span>Назва магазину</span><input class="inp" id="shopName" maxlength="100" placeholder="Наприклад, Bob Smoke"></label>
+              <label class="fld"><span>Підпис під назвою</span><input class="inp" id="shopSlogan" maxlength="180" placeholder="Короткий опис магазину"></label>
+              <label class="fld"><span>Заголовок головного банера</span><input class="inp" id="shopHero" maxlength="180"></label>
+              <label class="fld"><span>Текст головного банера</span><input class="inp" id="shopHeroText" maxlength="300"></label>
+              <label class="fld"><span>Контакт у Telegram</span><input class="inp" id="shopContact" maxlength="200" placeholder="@нікнейм або посилання"></label>
+              <label class="fld"><span>Графік роботи</span><input class="inp" id="shopHours" maxlength="200" placeholder="Пн–Нд, 10:00–20:00"></label>
+              <label class="fld wide"><span>Інформація про магазин</span><textarea class="inp" id="shopAbout" rows="3" maxlength="1500" placeholder="Текст, який покупець побачить у розділі «Про магазин»"></textarea></label>
+            </div>
+          </section>
+
+          <section class="card set-card">
+            <header class="card-h"><div><h2>Оплата та чек</h2><p class="muted">Номер картки бот підставляє в повідомлення «Дякую за замовлення». Зміна діє для нових замовлень, а для старих скористайтеся кнопкою «Надіслати знову».</p></div></header>
+            <div class="grid2">
+              <label class="fld"><span>Номер картки для оплати</span><input class="inp" id="payCard" maxlength="40" inputmode="numeric" placeholder="0000 0000 0000 0000" autocomplete="off"></label>
+              <label class="fld"><span>Менеджер у Telegram (у повідомленні)</span><input class="inp" id="payManager" maxlength="60" placeholder="@нікнейм"></label>
+              <label class="fld wide"><span>Заголовок чека</span><input class="inp" id="receiptTitle" maxlength="80" placeholder="Bob Smoke | ОПТ"></label>
+            </div>
+          </section>
+
+          <section class="card set-card">
+            <header class="card-h"><div><h2>Мінімальні суми та націнка</h2><p class="muted">Покупець не зможе оформити замовлення на меншу суму.</p></div></header>
+            <div class="grid3">
+              <label class="fld"><span>Мінімум для опту, ₴</span><input class="inp" id="minOrder" type="number" min="0" max="1000000" step="1" inputmode="numeric" placeholder="1500"></label>
+              <label class="fld"><span>Мінімум для роздробу, ₴</span><input class="inp" id="minOrderRetail" type="number" min="0" max="1000000" step="1" inputmode="numeric" placeholder="500"></label>
+              <label class="fld"><span>Націнка в роздробі на позицію, ₴</span><input class="inp" id="retailMarkup" type="number" min="0" max="1000000" step="1" inputmode="numeric" placeholder="100"></label>
+            </div>
+          </section>
+
+          <section class="card set-card">
+            <header class="card-h"><div><h2>Знижки за сумою замовлення (опт)</h2><p class="muted">Знижка рахується від суми товарів у замовленні й діє лише для опту. Рівень спрацьовує, коли сума не менша за значення «Від». Видаліть усі рівні, щоб вимкнути знижки.</p></div></header>
+            <div id="discountTiers" class="tiers"></div>
+            <div class="set-act"><button type="button" class="btn" id="addTier"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg>Додати рівень</button></div>
+          </section>
+
+          <section class="card set-card">
+            <header class="card-h"><div><h2>Реферальна програма</h2><p class="muted">Клієнт ділиться посиланням зі свого профілю в магазині («Запросити друга»). Друг одразу отримує одноразовий промокод на перше замовлення, а той, хто запросив, — коли перше замовлення друга отримає статус «Виконане». Значення 0 вимикає знижку.</p></div></header>
+            <div class="grid2">
+              <label class="fld"><span>Знижка для запрошеного друга, %</span><input class="inp" id="refFriend" type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="3"></label>
+              <label class="fld"><span>Знижка для того, хто запросив, %</span><input class="inp" id="refReward" type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="3"></label>
+            </div>
+          </section>
+
+          <section class="card set-card">
+            <header class="card-h"><div><h2>Категорії</h2><p class="muted">Назви, підписи, фото та націнки категорій тепер редагуються в окремому розділі.</p></div></header>
+            <button type="button" class="btn" data-tab="lines"><svg class="i" aria-hidden="true"><use href="#i-layers"/></svg>Відкрити «Категорії та лінійки»</button>
+          </section>
+
+          <div class="savebar"><p class="small">Зміни застосовуються після збереження.</p><button class="btn primary" type="submit"><svg class="i" aria-hidden="true"><use href="#i-check"/></svg>Зберегти налаштування</button></div>
+        </form>
+
+        <section class="card set-card" id="promoPanel">
+          <header class="card-h"><div><h2>Промокоди</h2><p class="muted">Знижка в % від суми товарів. Додається до знижки за сумою замовлення. Один клієнт може використати код лише раз. Персональні коди рефералки тут не показуються.</p></div></header>
+          <div class="grid4 promo-form">
+            <label class="fld"><span>Код (необов’язково)</span><input class="inp" id="promoCode" maxlength="32" autocomplete="off" placeholder="Створиться автоматично"></label>
+            <label class="fld"><span>Знижка, %</span><input class="inp" id="promoPercent" type="number" min="0.01" max="100" step="any" inputmode="decimal" placeholder="10"></label>
+            <label class="fld"><span>Скільки разів можна використати</span><input class="inp" id="promoMax" type="number" min="1" step="1" inputmode="numeric" placeholder="Порожньо — без ліміту"></label>
+            <label class="fld"><span>Діє до (включно)</span><input class="inp" id="promoExp" type="date"></label>
+          </div>
+          <div class="set-act"><button type="button" class="btn primary" id="promoAdd"><svg class="i" aria-hidden="true"><use href="#i-ticket"/></svg>Створити промокод</button></div>
+          <div id="promoList" class="promo-list"></div>
+          <div id="promoEmpty" class="empty hide"><span class="empty-ico"><svg class="i" aria-hidden="true"><use href="#i-ticket"/></svg></span><b>Промокодів ще немає</b><p>Створіть перший код за формою вище.</p></div>
+        </section>
+      </section>
+
+    </main>
+  </div>
+
+  <nav class="tabbar" id="btabs" aria-label="Швидка навігація">
+    <button type="button" data-tab="overview" class="on"><svg class="i" aria-hidden="true"><use href="#i-dashboard"/></svg><span>Огляд</span></button>
+    <button type="button" data-tab="orders"><svg class="i" aria-hidden="true"><use href="#i-bag"/></svg><span>Замовлення</span><i class="cnt hide" data-cnt="ord"></i></button>
+    <button type="button" data-tab="chats"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg><span>Чати</span><i class="cnt hide" data-cnt="chat"></i></button>
+    <button type="button" data-tab="products"><svg class="i" aria-hidden="true"><use href="#i-box"/></svg><span>Товари</span></button>
+    <button type="button" id="moreBtn" aria-haspopup="dialog"><svg class="i" aria-hidden="true"><use href="#i-more"/></svg><span>Ще</span></button>
+  </nav>
+</div>
+
+<!-- Шторка «Ще» (мобільна навігація) -->
+<aside id="moreSheet" class="drawer sheet hide" role="dialog" aria-modal="true" aria-labelledby="moreTitle">
+  <div class="dhead"><h2 id="moreTitle">Ще</h2><button type="button" class="btn icon ghost" id="moreClose" aria-label="Закрити"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+  <div class="dbody more-list">
+    <button type="button" data-tab="analytics"><svg class="i" aria-hidden="true"><use href="#i-chart"/></svg><span>Аналітика</span></button>
+    <button type="button" data-tab="lines"><svg class="i" aria-hidden="true"><use href="#i-layers"/></svg><span>Категорії та лінійки</span></button>
+    <button type="button" data-tab="users"><svg class="i" aria-hidden="true"><use href="#i-users"/></svg><span>Клієнти</span></button>
+    <button type="button" data-tab="referrals"><svg class="i" aria-hidden="true"><use href="#i-userplus"/></svg><span>Реферали</span></button>
+    <button type="button" data-tab="broadcast"><svg class="i" aria-hidden="true"><use href="#i-megaphone"/></svg><span>Розсилки</span></button>
+    <button type="button" data-tab="settings"><svg class="i" aria-hidden="true"><use href="#i-settings"/></svg><span>Налаштування</span></button>
+    <a href="/app/" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="#i-store"/></svg><span>Відкрити магазин</span></a>
+    <button type="button" class="out" data-logout><svg class="i" aria-hidden="true"><use href="#i-logout"/></svg><span>Вийти</span></button>
+  </div>
+</aside>
+
+<!-- Оновлення з Excel -->
+<section id="syncPanel" class="syncpanel hide" role="dialog" aria-modal="true" aria-labelledby="syTitle">
+  <div class="sy-wrap">
+    <header class="sy-head"><h2 id="syTitle">Оновлення з Excel</h2><button type="button" class="btn" id="syClose"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg>Закрити</button></header>
+    <div class="sy-scroll">
+      <p class="hint"><svg class="i" aria-hidden="true"><use href="#i-info"/></svg>Програма порівняла файл із каталогом. У каталозі нічого не зміниться, доки ви не натиснете «Підтвердити» біля позиції.</p>
+      <div id="syBody"></div>
+      <datalist id="syLines"></datalist>
+    </div>
+  </div>
+</section>
+
+<!-- Ціни лінійки -->
+<aside id="lpanel" class="drawer hide" role="dialog" aria-modal="true" aria-labelledby="lpTitle">
+  <div class="dhead"><div><h2 id="lpTitle">Лінійка</h2><p class="small" id="lpSub"></p></div><button type="button" class="btn icon ghost" id="lpClose" aria-label="Закрити"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+  <div class="dbody">
+    <div class="pgrid">
+      <section class="pcol"><h3>Опт</h3><div class="seg" data-op="w" role="group" aria-label="Спосіб зміни оптової ціни"><button type="button" data-m="set" class="on">Ціна</button><button type="button" data-m="shift">± грн</button><button type="button" data-m="percent">± %</button></div><input id="lpW" class="inp" inputmode="decimal" placeholder="Не змінювати" aria-label="Нова оптова ціна"><p class="small" id="lpWNow"></p></section>
+      <section class="pcol"><h3>Роздріб</h3><div class="seg" data-op="r" role="group" aria-label="Спосіб зміни роздрібної ціни"><button type="button" data-m="set" class="on">Ціна</button><button type="button" data-m="shift">± грн</button><button type="button" data-m="percent">± %</button></div><input id="lpR" class="inp" inputmode="decimal" placeholder="Іде за оптом" aria-label="Нова роздрібна ціна"><p class="small" id="lpRNow"></p></section>
+    </div>
+    <label class="chk"><input type="checkbox" id="lpReset"><span>Скинути роздрібну націнку до загальної</span></label>
+    <div id="lpPrev" class="lprev"><p class="small">Введіть нову ціну, щоб побачити, що зміниться.</p></div>
+    <section class="lp-manage">
+      <h3>Керування лінійкою</h3>
+      <div class="lp-photo"><div class="thumb lg" id="lpImg"></div><div class="grow"><b>Фото лінійки</b><p class="small">Одне фото для всіх товарів лінійки в магазині. JPG, PNG або WebP до 8 МБ.</p>
+        <button type="button" class="btn sm" id="lpPhotoBtn"><svg class="i" aria-hidden="true"><use href="#i-upload"/></svg>Змінити фото</button><input type="file" id="lpPhoto" accept="image/*" hidden></div></div>
+      <form class="lp-rename" id="lpRename" novalidate>
+        <label class="fld"><span>Перейменувати або перенести всі товари в лінійку</span><input class="inp" id="lpNewName" list="allLines" maxlength="200" placeholder="Нова або наявна назва лінійки" autocomplete="off"></label>
+        <button type="submit" class="btn sm"><svg class="i" aria-hidden="true"><use href="#i-move"/></svg>Застосувати</button>
+      </form>
+      <p class="small" id="lpRenameHint">Товари отримають цю назву лінійки в магазині й тут. Щоб повернути назву з каталогу постачальника, залиште поле порожнім.</p>
+      <div class="lp-danger" id="lpDangerBox"><div class="grow"><b>Видалити лінійку</b><p class="small" id="lpDangerText">Усі товари лінійки буде видалено з каталогу. Фото збережуться в архіві й повернуться, якщо товари знову з’являться в Excel.</p></div>
+        <button type="button" class="btn sm danger" id="lpDelete"><svg class="i" aria-hidden="true"><use href="#i-trash"/></svg>Видалити</button></div>
+    </section>
+  </div>
+  <div class="dfoot"><a class="btn ghost" id="lpShow" href="#">Показати товари</a><span class="grow"></span><button type="button" class="btn primary" id="lpApply" disabled>Застосувати</button></div>
+</aside>
+
+<div id="scrim" class="scrim hide"></div>
+
+<!-- Форма товару -->
+<aside id="drawer" class="drawer hide" role="dialog" aria-modal="true" aria-labelledby="dtitle">
+  <form id="pform" autocomplete="off">
+    <header class="dhead"><h2 id="dtitle">Товар</h2><button type="button" class="btn icon ghost" id="dclose" aria-label="Закрити"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></header>
+    <div class="dbody">
+      <div id="legal" class="alert warn hide"></div>
+
+      <section class="photo">
+        <div class="thumb xl" id="pphoto"></div>
+        <div class="photo-act">
+          <div class="photo-btns">
+            <button type="button" class="btn sm" id="pupload"><svg class="i" aria-hidden="true"><use href="#i-upload"/></svg>Завантажити фото</button>
+            <button type="button" class="btn sm ghost" id="pnophoto">Прибрати фото</button>
+          </div>
+          <input type="file" id="pfile" accept="image/jpeg,image/png,image/webp" hidden>
+          <label class="chk hide" id="grpWrap"><input type="checkbox" id="pgroup" checked><span id="grpText"></span></label>
+          <p class="small">JPG, PNG або WebP до 8 МБ. Зображення зменшується автоматично.</p>
+        </div>
+      </section>
+
+      <label class="fld"><span>Назва</span><input class="inp" id="pname" required maxlength="200"></label>
+      <div class="grid2">
+        <label class="fld"><span>Бренд</span><input class="inp" id="pbrand" required maxlength="80"></label>
+        <label class="fld"><span>Категорія</span><select class="inp" id="pcat" required></select></label>
+        <label class="fld"><span>Лінійка</span><input class="inp" id="pline" maxlength="200" list="allLines" placeholder="Для групової зміни цін"></label>
+        <label class="fld"><span>Модель</span><input class="inp" id="pmodel" maxlength="120" placeholder="Для под-систем"></label>
+        <label class="fld"><span>Варіант (смак, колір)</span><input class="inp" id="pvariant" maxlength="120"></label>
+        <label class="fld"><span>Наявність</span><select class="inp" id="pstatus">
+          <option value="in_stock">В наявності</option>
+          <option value="expected">Очікується на прибуття</option>
+          <option value="unavailable">Немає в наявності</option>
+        </select></label>
+        <label class="fld"><span>Об’єм, мл</span><input class="inp" id="pvol" type="number" min="0" step="any" inputmode="decimal"></label>
+        <label class="fld"><span>Нікотин, мг/мл</span><input class="inp" id="pnic" type="number" min="0" step="any" inputmode="decimal"></label>
+      </div>
+      <datalist id="allLines"></datalist>
+
+      <label class="hotbox"><span class="hb-t"><svg class="i" aria-hidden="true"><use href="#i-flame"/></svg><span><b>Хіт</b><small>Товар потрапляє в топ і має значок вогню на картинці в магазині</small></span></span><input type="checkbox" class="switch" id="phot"></label>
+
+      <fieldset class="prices">
+        <legend>Ціна</legend>
+        <div class="grid3">
+          <label class="fld"><span>Опт (продаж), ₴</span><input class="inp" id="pfinal" inputmode="decimal" placeholder="0"></label>
+          <label class="fld"><span>Закупівельна, ₴</span><input class="inp" id="ppurchase" inputmode="decimal" placeholder="0"></label>
+          <label class="fld"><span>Націнка в роздробі, ₴</span><input class="inp" id="pretail" inputmode="decimal" placeholder="За замовчуванням" title="Порожньо — діє загальна націнка з налаштувань (для картриджів 0)"></label>
+        </div>
+        <p class="small" id="pmarkup"></p>
+      </fieldset>
+      <p class="err" id="perr" role="alert"></p>
+    </div>
+    <footer class="dfoot">
+      <button type="button" class="btn danger hide" id="pdelete"><svg class="i" aria-hidden="true"><use href="#i-trash"/></svg>Видалити</button>
+      <span class="grow"></span>
+      <button type="button" class="btn" id="pcancel">Скасувати</button>
+      <button type="submit" class="btn primary" id="psave">Зберегти</button>
+    </footer>
+  </form>
+</aside>
+
+<!-- Шухляда замовлення -->
+<aside id="odrawer" class="drawer wide hide" role="dialog" aria-modal="true" aria-labelledby="odTitle">
+  <div class="dhead"><div class="grow"><h2 id="odTitle">Замовлення</h2><div class="od-sub" id="odSub"></div></div><button type="button" class="btn icon ghost" id="odClose" aria-label="Закрити"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+  <div class="dbody" id="odBody"></div>
+  <div class="dfoot" id="odFoot"></div>
+</aside>
+
+<!-- Шухляда клієнта -->
+<aside id="cdrawer" class="drawer hide" role="dialog" aria-modal="true" aria-labelledby="cdTitle">
+  <div class="dhead"><span class="avatar lg" id="cdAv" aria-hidden="true">·</span><div class="grow"><h2 id="cdTitle">Клієнт</h2><p class="small" id="cdSub"></p></div><button type="button" class="btn icon ghost" id="cdClose" aria-label="Закрити"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+  <div class="dbody" id="cdBody"></div>
+  <div class="dfoot" id="cdFoot"></div>
+</aside>
+
+<!-- Шухляда категорії -->
+<aside id="kdrawer" class="drawer hide" role="dialog" aria-modal="true" aria-labelledby="kdTitle">
+  <form id="kform" autocomplete="off" novalidate>
+    <div class="dhead"><div><h2 id="kdTitle">Категорія</h2><p class="small" id="kdSub"></p></div><button type="button" class="btn icon ghost" id="kdClose" aria-label="Закрити"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+    <div class="dbody">
+      <section class="photo"><div class="thumb xl" id="kdImg"></div>
+        <div class="photo-act"><b>Фото категорії</b><p class="small">Показується на картці категорії в магазині. JPG, PNG або WebP до 8 МБ.</p>
+          <div class="photo-btns"><button type="button" class="btn sm" id="kdPick"><svg class="i" aria-hidden="true"><use href="#i-upload"/></svg>Завантажити</button><button type="button" class="btn sm ghost" id="kdNoImg"><svg class="i" aria-hidden="true"><use href="#i-trash"/></svg>Прибрати</button></div>
+          <input type="file" id="kdFile" accept="image/*" hidden></div></section>
+      <label class="fld"><span>Назва в магазині</span><input class="inp" id="kdName" maxlength="100" required></label>
+      <label class="fld"><span>Підпис</span><input class="inp" id="kdSubIn" maxlength="180" placeholder="Коротко про категорію"></label>
+      <fieldset class="prices"><legend>Націнка категорії</legend>
+        <label class="fld"><span>Націнка на одиницю товару, ₴</span><input class="inp" id="kdMarkup" inputmode="decimal" autocomplete="off"></label>
+        <p class="small">Оптова ціна = закупівельна + націнка. Зміна перерахує ціни всіх товарів категорії; уже оформлені замовлення не зміняться.</p>
+        <div class="lprev" id="kdPrev"><p class="small">Змініть націнку, щоб побачити, скільки товарів отримають нову ціну.</p></div>
+      </fieldset>
+      <p class="err" id="kdErr" role="alert"></p>
+    </div>
+    <div class="dfoot"><button type="button" class="btn ghost" id="kdProducts"><svg class="i" aria-hidden="true"><use href="#i-box"/></svg>Товари</button><span class="grow"></span><button type="button" class="btn" id="kdCancel">Скасувати</button><button type="submit" class="btn primary" id="kdSave"><svg class="i" aria-hidden="true"><use href="#i-check"/></svg>Зберегти</button></div>
+  </form>
+</aside>
+
+<div id="toast" class="toasts" role="status" aria-live="polite"></div>
+<script type="module" src="js/admin.js"></script>
+</body>
+</html>

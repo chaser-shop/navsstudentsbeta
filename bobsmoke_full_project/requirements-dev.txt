@@ -1,0 +1,7 @@
+-r requirements.txt
+# старий закритий бот оператора (polling): python -m bot.main
+pyTelegramBotAPI>=4.20
+# тести
+pytest>=8.0
+httpx>=0.27
+mongomock>=4.1

@@ -1,0 +1,41 @@
+# Render Blueprint: один Web Service = API + Mini App + вебхук бота.
+# Render -> New -> Blueprint -> оберіть репозиторій. Змінні з sync:false Render запитає при створенні.
+services:
+  - type: web
+    name: telegram-shop
+    runtime: python
+    plan: free                      # free засинає після ~15 хв простою; для магазину краще starter ($7/міс)
+    region: frankfurt
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: MONGODB_URI              # Atlas: mongodb+srv://user:pass@cluster/...
+        sync: false
+      - key: MONGODB_DATABASE
+        value: backoffice
+      - key: JWT_SECRET
+        generateValue: true
+      - key: BOT_TOKEN                # від @BotFather
+        sync: false
+      - key: BOT_ALLOWED_IDS          # ваш Telegram ID (куди приходять нові замовлення), через кому
+        sync: false
+      - key: REQUIRED_CHANNEL         # канал для обов'язкової підписки; бот має бути АДМІНОМ каналу. off = без перевірки
+        value: "@bobsmoke_opt"
+      - key: REQUIRED_CHANNEL_LINK    # посилання на кнопці «Підписатись»
+        value: "https://t.me/bobsmoke_opt"
+      - key: NOVA_POSHTA_API_KEY
+        sync: false
+      - key: MIN_ORDER_TOTAL          # мінімальна сума замовлення, грн
+        value: "1500"
+      - key: PREPAY_ENABLED           # 1 = просити передоплату при накладеному платежі, 0 = не просити
+        value: "0"
+      - key: PREPAY_AMOUNT            # сума передоплати, грн (діє, лише якщо PREPAY_ENABLED=1)
+        value: "100"
+      - key: KEEPALIVE_SECONDS        # самопінг /health, щоб free-план не засинав; 0 = вимкнути
+        value: "600"
+      - key: SHOW_BLOCKED             # 1 = показувати всі товари (заборонені лише для перегляду), 0 = ховати їх
+        value: "1"
