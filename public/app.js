@@ -259,10 +259,16 @@
     stopPending();
     S.token = null;
     resetLocal();
+    if (r.error) throw r;
     S.token = r.token;
     LS.set('token', r.token);
     S.user = r.user;
     S.tab = 'today';
+    if (r.user.mustChangePassword) {
+      S.needPassword = true;
+    } else {
+      S.needPassword = false;
+    }
     await sync();
   }
 
@@ -1198,6 +1204,10 @@
         { id: 'student', title: 'Студент', hidden: true, back: 'students' },
         { id: 'grades', title: 'Оцінки', hidden: true, back: 'manage' },
         { id: 'notify', title: 'Сповіщення студентам', hidden: true, back: 'manage' },
+        { id: 'groups-full', title: 'Навчальні групи', icon: 'layers' },
+        { id: 'members', title: 'Учасники', icon: 'users' },
+        { id: 'schedule-admin', title: 'Розклад НАВС', icon: 'calendar' },
+        { id: 'notify', title: 'Сповіщення студентам', hidden: true, back: 'manage' },
       ],
     },
     { id: 'notifications', title: 'Сповіщення', short: 'Сповіщення', icon: 'bell', hideInTabbar: true },
@@ -1221,16 +1231,15 @@
     'admin/grades': { render: viewGrades, enter: () => loadGrades() },
     'admin/notify': { render: viewNotify, enter: () => loadNotifyUsers() },
     'settings/prefs': { render: viewSettings },
+    'admin/groups-full': { render: viewAdminWrapper('groups'), enter: () => { if (window.DiaryNavs) DiaryNavs.loadGroupsFull(); } },
+    'admin/members': { render: viewAdminWrapper('members'), enter: () => { if (window.DiaryNavs) DiaryNavs.loadMembers(); } },
+    'admin/schedule-admin': { render: viewAdminWrapper('schedule'), enter: () => { if (window.DiaryNavs) DiaryNavs.loadScheduleAdmin(); } },
   };
   const HOOKS = {};
   const CHG = {};
   const INP = {};
-  function runHooks(name, ...args) {
-    for (const fn of HOOKS[name] || []) { try { fn(...args); } catch (e) { console.error(e); } }
-  }
-  function hookHtml(name) {
-    return (HOOKS[name] || []).map((fn) => { try { return fn() || ''; } catch (e) { console.error(e); return ''; } }).join('');
-  }
+  function runHooks(name, ...args) { for (const fn of (HOOKS[name] || [])) { try { fn(...args); } catch (e) { console.error(e); } } }
+  function hookHtml(name) { return (HOOKS[name] || []).map((fn) => { try { return fn() || ''; } catch (e) { console.error(e); return ''; } }).join(''); }
 
   function badgeFor(id) {
     if (id === 'homework') return moderationQueue().length;
@@ -1288,7 +1297,11 @@
     if (!S.user) {
       removePushAsk();
       if (S.token) { app.innerHTML = '<div class="login-wrap"><span class="spin" style="width:28px;height:28px"></span></div>'; return; }
-      if (!$('#loginForm')) app.innerHTML = viewLogin();
+      if (!S.needPassword || !$('#changePassForm')) {
+        if (!$('#loginForm')) app.innerHTML = viewLogin();
+      } else if (!$('#changePassForm')) {
+        app.innerHTML = viewChangePassword();
+      }
       return;
     }
     const a = document.activeElement;
@@ -2261,6 +2274,34 @@
       S.installEvent = null;
       render();
     },
+    loginModeNavs() {
+      S.loginMode = 'navs';
+      loadNavsGroups();
+      render();
+      setTimeout(() => { const g = $('#loginGroup'); if (g && !g.value) g.focus(); else { const l = $('#loginUser'); if (l) l.focus(); } }, 50);
+    },
+    loginModeLegacy() {
+      S.loginMode = 'legacy';
+      render();
+      setTimeout(() => { const l = $('#fullName'); if (l) l.focus(); }, 50);
+    },
+    togglePass() {
+      const inp = $('#loginPass');
+      if (!inp) return;
+      const isHidden = inp.type === 'password';
+      inp.type = isHidden ? 'text' : 'password';
+    },
+    toggleNewPass() {
+      const inp = $('#newPass');
+      if (!inp) return;
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+    },
+    toggleConfirmPass() {
+      const inp = $('#confirmPass');
+      if (!inp) return;
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+    },
+    logout() { if (confirm('Вийти з акаунта? Дані на цьому пристрої буде видалено, на сервері вони лишаться.')) signOut(); },
     logout() { if (confirm('Вийти з акаунта? Дані на цьому пристрої буде видалено, на сервері вони лишаться.')) signOut(); },
   };
 
@@ -2556,6 +2597,8 @@
         else if (e.data.type === 'sync' && S.user) sync();
       });
     }
+    if (location.search) S.pendingRoute = location.search;
+    if (!S.token && !S.user) loadNavsGroups();
     if (location.search) S.pendingRoute = location.search;
 
     if (S.token) {
