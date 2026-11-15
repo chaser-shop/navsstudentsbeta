@@ -755,3 +755,215 @@ html[data-device="320x568"], html[data-device="375x667"] { --tab-h: 50px; }
 .a-inline-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .a-inline-form .field { flex: 1 1 200px; width: auto; min-width: 0; }
 .btn.a-danger { color: var(--red); }
+
+/* ───────── НАВС: Сучасна авторизація, розклад та шкала ───────── */
+
+.navs-login-card {
+  max-width: 440px;
+  width: 100%;
+  margin: 0 auto;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--r-lg);
+  padding: 36px 32px;
+}
+.navs-crest {
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 16px;
+  display: block;
+  filter: drop-shadow(0 4px 12px rgba(30, 58, 138, 0.25));
+  transition: transform 0.3s ease;
+}
+.navs-crest:hover {
+  transform: scale(1.04);
+}
+.navs-academy-title {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  margin-bottom: 4px;
+}
+.navs-diary-sub {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 24px;
+}
+.pass-field-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.pass-field-wrap .field {
+  padding-right: 44px;
+  width: 100%;
+}
+.pass-toggle-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+.pass-toggle-btn:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+/* Шкала оцінювання НАВС */
+.grade-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.grade-badge.grade-5 { background: rgba(5, 150, 105, 0.14); color: #059669; border: 1px solid rgba(5, 150, 105, 0.3); }
+.grade-badge.grade-4plus { background: rgba(37, 99, 235, 0.14); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.3); }
+.grade-badge.grade-4 { background: rgba(2, 132, 199, 0.14); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.3); }
+.grade-badge.grade-3 { background: rgba(217, 119, 6, 0.14); color: #d97706; border: 1px solid rgba(217, 119, 6, 0.3); }
+.grade-badge.grade-3minus { background: rgba(234, 88, 12, 0.14); color: #ea580c; border: 1px solid rgba(234, 88, 12, 0.3); }
+.grade-badge.grade-2 { background: rgba(220, 38, 38, 0.14); color: #dc2626; border: 1px solid rgba(220, 38, 38, 0.3); }
+
+/* Сучасний розклад НАВС */
+.sched-header {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r);
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sched-group-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sched-faculty-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px;
+  background: var(--surface-2);
+  color: var(--muted);
+  border-radius: 6px;
+}
+.remote-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(99, 102, 241, 0.12);
+  color: #4f46e5;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.sched-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.sched-table th, .sched-table td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.sched-table th {
+  background: var(--surface-2);
+  font-weight: 700;
+  color: var(--text-2);
+}
+.sched-table tr.has-changed {
+  background: rgba(245, 158, 11, 0.08);
+}
+.sched-time-col {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font-weight: 650;
+  color: var(--text);
+}
+.sched-card {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.sched-card:hover {
+  box-shadow: var(--shadow-md);
+}
+.sched-card.is-remote {
+  border-left: 4px solid #6366f1;
+}
+.sched-card.is-changed {
+  border-left: 4px solid var(--warn);
+  background: rgba(245, 158, 11, 0.04);
+}
+.diff-alert-box {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--r);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  color: var(--warn);
+  font-size: 13.5px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Облікові дані та копіювання */
+.cred-card {
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cred-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+.cred-row b {
+  font-family: monospace;
+  font-size: 15px;
+  background: var(--surface);
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+}
+

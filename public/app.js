@@ -40,6 +40,12 @@
     installEvent: null,
     needPassword: false,
     deviceRequests: 0,
+    loginMode: 'navs', // 'navs' = login/password/group, 'legacy' = full name
+    pendingRoute: null,
+    pushEnsured: false,
+    installEvent: null,
+    needPassword: false,
+    deviceRequests: 0,
     unread: 0,
     openConflicts: 0,
     deviceTrusted: true,
@@ -1327,6 +1333,100 @@
     if (window.Charts) Charts.mount(app);
   }
 
+  // ───────────── Сучасна форма входу НАВС ─────────────
+
+  let navsGroups = [];
+
+  async function loadNavsGroups() {
+    try {
+      const r = await api('GET', '/api/auth/groups');
+      navsGroups = (r && r.groups) ? r.groups : [];
+    } catch (e) {
+      navsGroups = [];
+    }
+  }
+
+  function viewLogin() {
+    const groupOpts = navsGroups.length
+      ? navsGroups.map((g) => `<option value="${esc(g.name)}">${esc(g.name)} (курс ${g.course})</option>`).join('')
+      : '<option value="">— Завантаження…</option>';
+    const isNavsMode = S.loginMode === 'navs';
+    return `<div class="login-wrap"><div class="login">
+      <img class="navs-crest" src="/icons/navs-emblem.svg" alt="Емблема НАВС">
+      <div class="navs-academy-title">Національна академія<br>внутрішніх справ</div>
+      <div class="navs-diary-sub">Електронний щоденник</div>
+      <form id="loginForm" autocomplete="on">
+        <div class="navs-login-card">
+          ${isNavsMode ? `
+            <label class="label" for="loginUser">Логін</label>
+            <input class="field" id="loginUser" name="login" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="ivanenko.ip" required>
+            <label class="label" for="loginPass">Пароль</label>
+            <div class="pass-field-wrap">
+              <input class="field" id="loginPass" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required>
+              <button class="pass-toggle-btn" type="button" data-act="togglePass" aria-label="Показати пароль">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <label class="label" for="loginGroup">Навчальна група</label>
+            <select class="field" id="loginGroup" name="group">
+              <option value="">Оберіть свою групу</option>
+              ${groupOpts}
+            </select>
+            <button class="btn big auto" id="loginBtn" type="submit">Увійти</button>
+            <div class="muted small" style="text-align:center;margin-top:8px">
+              <button class="link small" type="button" data-act="loginModeLegacy">Вхід за прізвищем</button>
+            </div>
+          ` : `
+            <label class="label" for="fullName">Прізвище, ім'я та по батькові</label>
+            <input class="field" id="fullName" name="name" type="text" autocomplete="name" autocapitalize="words" autocorrect="off" spellcheck="false" placeholder="Іваненко Іван Іванович" required>
+            <div id="passWrap" ${S.needPassword ? '' : 'hidden'} style="display:${S.needPassword ? 'flex' : 'none'};flex-direction:column;gap:10px">
+              <label class="label" for="adminPass">Пароль адміністратора</label>
+              <input class="field" id="adminPass" type="password" autocomplete="current-password" placeholder="Потрібен для нового пристрою">
+            </div>
+            <div class="muted small">Під цим ПІБ вас бачитиме адміністратор. Вхід із нового пристрою може потребувати його підтвердження.</div>
+            <div class="muted small" style="text-align:center">
+              <button class="link small" type="button" data-act="loginModeNavs">Вхід за логіном</button>
+            </div>
+            <button class="btn big auto" id="loginBtn" type="submit">Увійти</button>
+          `}
+          <div id="loginErr" class="err" style="text-align:center;margin-top:10px">${esc(loginNotice)}</div>
+        </div>
+      </form>
+    </div></div>`;
+  }
+
+  // ───────────── Зміна тимчасового пароля ─────────────
+
+  function viewChangePassword() {
+    return `<div class="login-wrap"><div class="login">
+      <img class="navs-crest" src="/icons/navs-emblem.svg" alt="Емблема НАВС">
+      <div class="navs-academy-title">Національна академія<br>внутрішніх справ</div>
+      <div class="navs-diary-sub">Зміна пароля</div>
+      <form id="changePassForm" autocomplete="on">
+        <div class="navs-login-card">
+          <div class="muted small" style="text-align:center;margin-bottom:12px">
+            Ви увійшли за тимчасовим паролем. Для продовження роботи встановіть новий пароль.
+          </div>
+          <label class="label" for="newPass">Новий пароль</label>
+          <div class="pass-field-wrap">
+            <input class="field" id="newPass" type="password" autocomplete="new-password" placeholder="Мінімум 8 символів" required minlength="8">
+            <button class="pass-toggle-btn" type="button" data-act="toggleNewPass" aria-label="Показати пароль">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <label class="label" for="confirmPass">Підтвердження пароля</label>
+          <div class="pass-field-wrap">
+            <input class="field" id="confirmPass" type="password" autocomplete="new-password" placeholder="Повторіть пароль" required>
+            <button class="pass-toggle-btn" type="button" data-act="toggleConfirmPass" aria-label="Показати пароль">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <div id="changePassErr" class="err" style="text-align:center"></div>
+          <button class="btn big auto" id="changePassBtn" type="submit">Змінити пароль</button>
+        </div>
+      </form>
+    </div></div>`;
+  }
   function viewLogin() {
     return `<div class="login-wrap"><div class="login">
       <img class="logo" src="/icons/icon-192.png" alt="">
@@ -2269,6 +2369,95 @@
     if (el && el.dataset.inp === 'ratingSubj') {
       const root = el.closest('.sh-body');
       let sum = 0; let any = false;
+  document.addEventListener('submit', async (e) => {
+    if (e.target.id === 'loginForm') {
+      e.preventDefault();
+      const err = $('#loginErr');
+      const btn = $('#loginBtn');
+      if (S.loginMode === 'navs') {
+        const loginVal = $('#loginUser').value.trim();
+        const password = $('#loginPass').value;
+        const group = $('#loginGroup').value;
+        err.textContent = '';
+        if (!loginVal) { err.textContent = 'Введіть логін.'; return; }
+        if (!password) { err.textContent = 'Введіть пароль.'; return; }
+        if (!group) { err.textContent = 'Оберіть навчальну групу.'; return; }
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spin"></span>';
+        try {
+          loginNotice = '';
+          stopPending();
+          await api('POST', '/api/auth/login', { login: loginVal, password, group, deviceId });
+          await sync();
+          render();
+        } catch (ex) {
+          err.textContent = ex.message || 'Помилка входу.';
+          btn.disabled = false;
+          btn.textContent = 'Увійти';
+        }
+        return;
+      }
+      // Legacy: full name login
+      const name = $('#fullName').value.replace(/\s+/g, ' ').trim();
+      err.textContent = '';
+      if (name.split(' ').length < 2) { err.textContent = 'Введіть прізвище, ім\'я та по батькові.'; return; }
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spin"></span>';
+      try {
+        loginNotice = '';
+        stopPending();
+        await login(name, $('#adminPass') ? $('#adminPass').value : '');
+      } catch (ex) {
+        if (!S.user) {
+          if (ex.code === 'password_required') {
+            S.needPassword = true;
+            const w = $('#passWrap');
+            if (w) { w.hidden = false; w.style.display = 'flex'; }
+          }
+          if (ex.code === 'device_pending') {
+            setLoginMsg(ex.message, 'wait');
+            startPending(name);
+          } else {
+            setLoginMsg(ex.message, 'err');
+          }
+          btn.disabled = false;
+          btn.textContent = 'Увійти';
+        }
+      }
+      return;
+    }
+
+    // Change password form
+    if (e.target.id === 'changePassForm') {
+      e.preventDefault();
+      const err = $('#changePassErr');
+      const btn = $('#changePassBtn');
+      const newPass = $('#newPass').value;
+      const confirmPass = $('#confirmPass').value;
+      err.textContent = '';
+      if (!newPass || newPass.length < 8) { err.textContent = 'Пароль має містити щонайменше 8 символів.'; return; }
+      if (newPass !== confirmPass) { err.textContent = 'Паролі не співпадають.'; return; }
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spin"></span>';
+      try {
+        const r = await api('POST', '/api/auth/change-password', {
+          newPassword: newPass,
+          confirmPassword: confirmPass,
+        });
+        if (r.ok) {
+          toast('Пароль успішно змінено.');
+          S.needPassword = false;
+          S.loginMode = 'navs';
+          await loadNavsGroups();
+          render();
+        }
+      } catch (ex) {
+        err.textContent = ex.message || 'Помилка зміни пароля.';
+        btn.disabled = false;
+        btn.textContent = 'Змінити пароль';
+      }
+    }
+  });
       root.querySelectorAll('[data-inp="ratingSubj"]').forEach((i) => { if (i.value.trim() !== '' && Number.isFinite(+i.value)) { sum += +i.value; any = true; } });
       const t = root.querySelector('[name="points"]');
       if (any && t) t.value = String(Math.round(sum * 100) / 100);

@@ -23,6 +23,10 @@ const { migrate } = require('./lib/migrate');
 const ratingRoutes = require('./lib/routes/rating');
 const meRoutes = require('./lib/routes/me');
 const adminRoutes = require('./lib/routes/admin');
+const groupsMembersRoutes = require('./lib/routes/groups_members');
+const scheduleApiRoutes = require('./lib/routes/schedule_api');
+const { verifyPassword, hashPassword, validatePasswordStrength } = require('./lib/auth_manager');
+const { startScheduleScheduler, stopScheduleScheduler } = require('./lib/schedule_sync');
 
 // ───────────────────────── Налаштування ─────────────────────────
 
@@ -249,12 +253,23 @@ setInterval(() => attempts.clear(), 60 * 60 * 1000).unref();
 
 // ───────────────────────── Серіалізація ─────────────────────────
 
-const ROLES = { starosta: 'Староста', deputy: 'Заступник старости' };
+const ROLES = { starosta: 'Староста', deputy: 'Заступник старости', admin: 'Головний адміністратор', student: 'Студент' };
 /** Адміністратор, староста або заступник старости: підтверджують домашнє й завантажують розклад. */
-const isMod = (u) => !!(u && (u.isAdmin || ROLES[u.role]));
+const isMod = (u) => !!(u && (u.isAdmin || u.role === 'admin' || u.role === 'starosta' || u.role === 'deputy'));
 const pubUser = (u) => ({
-  id: u._id, fullName: u.fullName, isAdmin: !!u.isAdmin, role: ROLES[u.role] ? u.role : '', canModerate: isMod(u),
-  linked: !!u.studentId, studentName: u.studentName || '',
+  id: u._id,
+  fullName: u.fullName,
+  login: u.login || '',
+  isAdmin: !!u.isAdmin || u.role === 'admin',
+  role: ROLES[u.role] ? u.role : (u.isAdmin ? 'admin' : 'student'),
+  group: u.group || '',
+  course: u.course || 1,
+  faculty: u.faculty || 'ННІ №1',
+  canModerate: isMod(u),
+  linked: !!u.studentId,
+  studentName: u.studentName || '',
+  mustChangePassword: !!u.mustChangePassword,
+  isBlocked: !!u.isBlocked,
 });
 const pubLesson = (l) => ({
   id: l._id, pair: l.pair, start: l.start, end: l.end, subjectKey: l.subjectKey,
@@ -688,19 +703,87 @@ const ok = () => ({});
 
 let VAPID_PUBLIC = '';
 
-// — вхід
+// — вхід (сучасний за логіном/паролем/групою та спадковий за ПІБ)
 route('POST', '/api/auth/login', async ({ body, ip, req }) => {
   rateLimit(ip);
-  const fullName = normName(body.fullName);
-  const deviceId = str(body.deviceId, 100);
-  if (fullName.length > 100 || fullName.split(' ').length < 2) {
-    throw new HttpError(400, 'Введіть прізвище, ім’я та по батькові.');
+  const deviceId = str(body.deviceId, 100) || crypto.randomUUID();
+  const label = devLabel(body, req);
+
+  // ── 1. Вхід за Логіном + Паролем + Групою ──
+  const inputLogin = str(body.login || body.username, 80).trim().toLowerCase();
+  if (inputLogin) {
+    let user = await users.findOne({ login: inputLogin });
+    if (!user) {
+      user = await users.findOne({ nameKey: normKey(inputLogin) });
+    }
+    if (!user) {
+      throw new HttpError(401, 'Невірний логін або пароль.');
+    }
+
+    if (user.isBlocked) {
+      throw new HttpError(403, 'Ваш обліковий запис заблоковано адміністратором.');
+    }
+
+    if (user.lockedUntil && new Date(user.lockedUntil).getTime() > Date.now()) {
+      const waitMin = Math.max(1, Math.ceil((new Date(user.lockedUntil).getTime() - Date.now()) / 60000));
+      throw new HttpError(429, `Забагато невдалих спроб входу. Зачекайте ${waitMin} хв.`);
+    }
+
+    // Перевірка належності до групи (для студентів)
+    const selectedGroup = str(body.group, 60).trim();
+    if (selectedGroup && !user.isAdmin && user.role !== 'admin') {
+      if (user.group && user.group.toLowerCase() !== selectedGroup.toLowerCase()) {
+        throw new HttpError(403, `Користувач не належить до групи «${selectedGroup}». Ваша група: «${user.group || 'не призначено'}».`);
+      }
+    }
+
+    // Перевірка пароля
+    const password = String(body.password || '');
+    if (!password) {
+      throw new HttpError(400, 'Введіть пароль.');
+    }
+
+    let passwordOk = false;
+    if (user.passwordHash) {
+      passwordOk = await verifyPassword(password, user.passwordHash);
+    } else if (user.isAdmin && ADMIN_PASSWORD) {
+      passwordOk = safeEq(password, ADMIN_PASSWORD);
+    } else if (ADMIN_PASSWORD && safeEq(password, ADMIN_PASSWORD)) {
+      passwordOk = true;
+    }
+
+    if (!passwordOk) {
+      const failed = (user.failedAttempts || 0) + 1;
+      const update = { failedAttempts: failed };
+      if (failed >= 5) {
+        update.lockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 хв
+      }
+      await users.updateOne({ _id: user._id }, { $set: update });
+      throw new HttpError(401, 'Невірний логін або пароль.');
+    }
+
+    // Успішний вхід: скидаємо лічильник помилок
+    await users.updateOne(
+      { _id: user._id },
+      { $set: { failedAttempts: 0, lockedUntil: null, lastSeenAt: new Date() } }
+    );
+
+    normDevices(user);
+    if (!user.deviceIds.includes(deviceId)) {
+      await addDevice(user, deviceId, label, true);
+    }
+
+    return { token: signToken(user._id, deviceId), user: pubUser(user) };
   }
-  if (!deviceId) throw new HttpError(400, 'Не вказано ідентифікатор пристрою.');
+
+  // ── 2. Вхід за ПІБ (спадковий клієнт / тести / iOS) ──
+  const fullName = normName(body.fullName);
+  if (fullName.length > 100 || fullName.split(' ').length < 2) {
+    throw new HttpError(400, 'Введіть прізвище, ім’я та по батькові або логін.');
+  }
   const nameKey = normKey(fullName);
   const adminByName = ADMIN_NAMES.has(nameKey);
 
-  const label = devLabel(body, req);
   let user = await users.findOne({ nameKey });
   if (!user) {
     const isAdmin = adminByName || (ADMIN_NAMES.size === 0 && (await users.countDocuments({})) === 0);
@@ -754,6 +837,58 @@ route('POST', '/api/auth/login', async ({ body, ip, req }) => {
   }
   return { token: signToken(user._id, deviceId), user: pubUser(user) };
 }, { auth: false });
+
+// — публічний список активних груп для випадаючого списку на сторінці входу
+route('GET', '/api/auth/groups', async () => {
+  const list = await ctx.col.groups.find({ active: { $ne: false }, status: { $nin: ['inactive', 'archived'] } }).sort({ _id: 1 }).toArray();
+  return {
+    groups: list.map((g) => ({
+      id: g._id,
+      name: g._id,
+      course: g.course || 1,
+      faculty: g.faculty || 'ННІ №1',
+    })),
+  };
+}, { auth: false });
+
+// — зміна пароля (при першому вході за тимчасовим паролем або у профілі)
+route('POST', '/api/auth/change-password', async ({ body, user, ip }) => {
+  const currentPassword = String(body.currentPassword || '');
+  const newPassword = String(body.newPassword || '');
+  const confirmPassword = String(body.confirmPassword || '');
+
+  if (!newPassword || newPassword !== confirmPassword) {
+    throw new HttpError(400, 'Новий пароль та підтвердження не співпадають.');
+  }
+
+  const check = validatePasswordStrength(newPassword);
+  if (!check.ok) {
+    throw new HttpError(400, check.error);
+  }
+
+  // Якщо у користувача вже встановлено пароль і це не обов'язкова зміна за timely паролем
+  if (user.passwordHash && !user.mustChangePassword) {
+    const valid = await verifyPassword(currentPassword, user.passwordHash);
+    if (!valid) {
+      throw new HttpError(400, 'Невірний поточний пароль.');
+    }
+  }
+
+  const newHash = await hashPassword(newPassword);
+  await users.updateOne(
+    { _id: user._id },
+    {
+      $set: {
+        passwordHash: newHash,
+        mustChangePassword: false,
+        updatedAt: new Date(),
+      },
+    }
+  );
+
+  await audit(user, 'user.password_change', { id: user._id }, {}, ip);
+  return { ok: true, message: 'Пароль успішно змінено.' };
+});
 
 // — стан запиту на новий пристрій (клієнт опитує його, поки адміністратор не підтвердить)
 route('POST', '/api/auth/device-status', async ({ body, ip }) => {
@@ -1338,11 +1473,13 @@ function serveStatic(req, res, url) {
   fs.createReadStream(file).pipe(res);
 }
 
-// ───────────────────────── Журнал успішності ─────────────────────────
+// ───────────────────────── Журнал успішності та модулі ─────────────────────────
 
 ratingRoutes.register(route);
 meRoutes.register(route, { deviceTrusted, rateLimit });
 adminRoutes.register(route);
+groupsMembersRoutes.register(route);
+scheduleApiRoutes.register(route);
 
 /**
  * Щохвилини: щоденний знімок рейтингу (основа статистики) і о DIGEST_HOUR — підсумок дня
@@ -1402,6 +1539,7 @@ async function start({ port = PORT, schedulers = true } = {}) {
   console.log(`Щоденник: сервер слухає порт ${server.address().port}${ctx.txn ? ' (транзакції MongoDB увімкнено)' : ''}`);
   if (schedulers) {
     sync.start();
+    startScheduleScheduler();
     timers.push(setInterval(tick, TICK_MS));
     timers.push(setInterval(gradesTick, 60 * 1000));
     timers.push(setInterval(progressTick, 60 * 1000));
@@ -1421,6 +1559,7 @@ async function start({ port = PORT, schedulers = true } = {}) {
 
 async function stop() {
   sync.stop();
+  stopScheduleScheduler();
   timers.splice(0).forEach(clearInterval);
   await new Promise((resolve) => server.close(() => resolve()));
   if (ctx.client) await ctx.client.close();
