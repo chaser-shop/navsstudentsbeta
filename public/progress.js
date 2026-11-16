@@ -249,7 +249,12 @@
       <div class="grow"><h2 style="font-size:22px">${esc(a.fullName)}</h2>
         <div class="hstack wrap" style="gap:6px;margin-top:6px">${D.roleBadge(S.user) || D.badge('Студент', 'gray')}${pr.linked ? D.badge(pr.stats.student.group, 'sky') : D.badge('Не прив’язано до рейтингу', 'warn')}
           ${a.deviceTrusted ? D.badge('Довірений пристрій', 'accent') : D.badge('Пристрій не підтверджено', 'warn')}</div></div></div>
-      ${!a.deviceTrusted ? ui.notice('warn', 'З цього пристрою не можна змінювати бали, доки адміністратор його не підтвердить (Адміністрування → Керування → Учасники та пристрої).') : ''}</div>`;
+      ${!a.deviceTrusted ? ui.notice('warn', 'З цього пристрою не можна змінювати бали, доки адміністратор його не підтвердить (Адміністрування → Керування → Учасники та пристрої).') : ''}
+      <div class="sep"></div>
+      <div class="spread" style="align-items:center">
+        <div><div class="card-title">Безпека</div><div class="card-sub">Зміна пароля облікового запису</div></div>
+        <button class="btn soft auto" data-act="cpOpen">${ic('shield', 16)} Змінити пароль</button>
+      </div></div>`;
     if (!pr.linked) return h + notLinked();
     const s = pr.stats;
     const c = s.current;
@@ -279,6 +284,29 @@
           ${pr.syncUpdates.length ? `<div class="sc-list">${pr.syncUpdates.map(historyItem).join('')}</div>` : '<div class="muted small">Таблиця ще не змінювала ваші бали.</div>'}</div>
       </div></div>`;
     return h;
+  }
+
+  // ───────────── Зміна пароля в профілі ─────────────
+
+  function openChangePassword() {
+    const s = {
+      auto: false,
+      title: 'Зміна пароля',
+      submitting: false,
+      msg: '',
+      msgCls: 'muted',
+      render() {
+        const cur = S.user && S.user.login ? '' : '';
+        return `<div class="form">
+          <div class="muted small" style="margin-bottom:12px">Пароль має містити щонайменше 8 символів, хоча б одну літеру і одну цифру.</div>
+          <label><span class="label">Новий пароль</span><input class="field" name="newPassword" type="password" autocomplete="new-password" placeholder="Мінімум 8 символів"></label>
+          <label><span class="label">Підтвердження</span><input class="field" name="confirmPassword" type="password" autocomplete="new-password" placeholder="Повторіть пароль"></label>
+          <div data-role="msg" class="small ${s.msgCls}" ${s.msg ? '' : 'hidden'}>${esc(s.msg)}</div>
+          <button class="btn" data-act="cpSave" ${s.submitting ? 'disabled' : ''}>${s.submitting ? '<span class="spin"></span>' : 'Зберегти пароль'}</button>
+        </div>`;
+      },
+    };
+    D.openSheet(s);
   }
 
   // ───────────── головна (віджети) ─────────────
@@ -442,6 +470,34 @@
             if (e.code === 'stale' || e.code === 'not_increase') { await loadScores(); D.rerender(s); $('[data-role="err"]', s.el).textContent = e.message; }
           }
         });
+      },
+      cpOpen() { openChangePassword(); },
+      async cpSave(el) {
+        const s = D.sheetOf(el);
+        if (!s) return;
+        s.submitting = true;
+        s.msg = ''; s.msgCls = 'muted';
+        D.rerender(s);
+        const body = s.el;
+        const newPw = body.querySelector('[name="newPassword"]').value;
+        const confPw = body.querySelector('[name="confirmPassword"]').value;
+        if (!newPw || newPw.length < 8) { s.msg = 'Пароль має містити щонайменше 8 символів.'; s.msgCls = 'err'; s.submitting = false; D.rerender(s); return; }
+        if (newPw !== confPw) { s.msg = 'Паролі не співпадають.'; s.msgCls = 'err'; s.submitting = false; D.rerender(s); return; }
+        try {
+          const r = await api('POST', '/api/auth/change-password', { newPassword: newPw, confirmPassword: confPw });
+          if (r.ok) {
+            s.msg = 'Пароль успішно змінено!';
+            s.msgCls = 'ok';
+            s.submitting = false;
+            D.rerender(s);
+            setTimeout(() => D.closeSheet(), 1200);
+          }
+        } catch (e) {
+          s.msg = e.message || 'Помилка зміни пароля.';
+          s.msgCls = 'err';
+          s.submitting = false;
+          D.rerender(s);
+        }
       },
       statsRange(el) {
         P.range = el.dataset.v;

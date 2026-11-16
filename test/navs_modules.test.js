@@ -315,3 +315,71 @@ test('6. Official NAVS Rating Scale & Normalization', () => {
   assert.equal(agg.normalized, 85);
   assert.equal(agg.gradeInfo.grade, '4+');
 });
+
+test('7. mustChangePassword blocks API access until password changed', async () => {
+  // Створюємо нового студента (має тимчасовий пароль і mustChangePassword=true)
+  const createRes = await h.call(adminSession, 'POST', '/api/admin/members', {
+    fullName: 'Тестовий Студент Іванович',
+    group: '201 СПД',
+    role: 'student',
+  });
+  assert.equal(createRes.status, 200);
+  const { credentials } = createRes.data;
+  assert.ok(credentials.login);
+  assert.ok(credentials.tempPassword);
+  const newStudentId = createRes.data.user.id;
+
+  // Вхід тимчасовим паролем — успішно
+  const loginRes = await h.call(null, 'POST', '/api/auth/login', {
+    login: credentials.login,
+    password: credentials.tempPassword,
+    group: '201 СПД',
+    deviceId: 'test-device-1',
+  });
+  assert.equal(loginRes.status, 200, JSON.stringify(loginRes.data));
+  assert.equal(loginRes.data.user.mustChangePassword, true);
+  const studentToken = loginRes.data.token;
+
+  // Спроба викликати /api/me/scores — має бути 403 (must_change_password)
+  const meRes = await h.call({ token: studentToken, deviceId: 'test-device-1' }, 'GET', '/api/me/scores');
+  assert.equal(meRes.status, 403, JSON.stringify(meRes.data));
+  assert.equal(meRes.data.code, 'must_change_password');
+
+  // Зміна пароля — успішно
+  const changeRes = await h.call({ token: studentToken, deviceId: 'test-device-1' }, 'POST', '/api/auth/change-password', {
+    newPassword: 'SecurePass123',
+    confirmPassword: 'SecurePass123',
+  });
+  assert.equal(changeRes.status, 200, JSON.stringify(changeRes.data));
+  assert.equal(changeRes.data.ok, true);
+
+  // Тепер /api/me/scores доступний
+  const meRes2 = await h.call({ token: studentToken, deviceId: 'test-device-1' }, 'GET', '/api/me/scores');
+  assert.equal(meRes2.status, 200, JSON.stringify(meRes2.data));
+
+  // Вхід з новим паролем — mustChangePassword має бути false
+  const loginRes2 = await h.call(null, 'POST', '/api/auth/login', {
+    login: credentials.login,
+    password: 'SecurePass123',
+    group: '201 СПД',
+    deviceId: 'test-device-1',
+  });
+  assert.equal(loginRes2.status, 200);
+  assert.equal(loginRes2.data.user.mustChangePassword, false);
+});
+
+test('8. Password reset by admin sets mustChangePassword=true again', async () => {
+  // Отримуємо існуючого студента з тесту 7
+  const users = await h.ctx.col.users.find({ fullName: 'Тестовий Студент Іванович' }).toArray();
+  assert.ok(users.length > 0);
+  const student = users[0];
+
+  // Скидаємо пароль як адміністратор
+  const resetRes = await h.call(adminSession, 'POST', `/api/admin/members/${student._id}/reset-password`);
+  assert.equal(resetRes.status, 200, JSON.stringify(resetRes.data));
+  assert.ok(resetRes.data.credentials.tempPassword);
+
+  // Перевіряємо, що mustChangePassword=true
+  const dbUser = await h.ctx.col.users.findOne({ _id: student._id });
+  assert.equal(dbUser.mustChangePassword, true);
+});

@@ -12,8 +12,6 @@
   const { S, api, esc, ic, ui, fmt, toast, badge } = D;
   const $ = (s, r = document) => r.querySelector(s);
   const render = () => D.render();
-  const $ = (s, r = document) => r.querySelector(s);
-  const render = () => D.render();
 
   const RENDERERS = { groups: viewNavsGroups, members: viewNavsMembers, schedule: viewNavsScheduleAdmin };
 

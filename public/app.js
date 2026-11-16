@@ -1296,11 +1296,12 @@
     if (!S.user) {
       removePushAsk();
       if (S.token) { app.innerHTML = '<div class="login-wrap"><span class="spin" style="width:28px;height:28px"></span></div>'; return; }
-      if (!S.needPassword || !$('#changePassForm')) {
-        if (!$('#loginForm')) app.innerHTML = viewLogin();
-      } else if (!$('#changePassForm')) {
-        app.innerHTML = viewChangePassword();
-      }
+      if (!$('#loginForm')) app.innerHTML = viewLogin();
+      return;
+    }
+    // Якщо потрібно змінити тимчасовий пароль — показуємо екран зміни пароля
+    if (S.needPassword) {
+      if (!$('#changePassForm')) app.innerHTML = viewChangePassword();
       return;
     }
     const a = document.activeElement;
@@ -1439,26 +1440,6 @@
       </form>
     </div></div>`;
   }
-  function viewLogin() {
-    return `<div class="login-wrap"><div class="login">
-      <img class="logo" src="/icons/icon-192.png" alt="">
-      <div><h1>Щоденник студента</h1><div class="muted">Розклад, домашнє завдання, бали та статистика успішності в одному місці</div></div>
-      <form id="loginForm" autocomplete="on">
-        <div class="card">
-          <label class="label" for="fullName">Прізвище, ім’я та по батькові</label>
-          <input class="field" id="fullName" name="name" type="text" autocomplete="name" autocapitalize="words" autocorrect="off" spellcheck="false" placeholder="Іваненко Іван Іванович" required>
-          <div id="passWrap" ${S.needPassword ? '' : 'hidden'} style="display:${S.needPassword ? 'flex' : 'none'};flex-direction:column;gap:10px">
-            <label class="label" for="adminPass">Пароль адміністратора</label>
-            <input class="field" id="adminPass" type="password" autocomplete="current-password" placeholder="Потрібен для нового пристрою">
-          </div>
-          <div class="muted small">Під цим ПІБ вас бачитиме адміністратор. Вхід із нового пристрою може потребувати його підтвердження.</div>
-          <div id="loginErr" class="err" style="text-align:center">${esc(loginNotice)}</div>
-          <button class="btn big" id="loginBtn" type="submit">Увійти</button>
-        </div>
-      </form>
-    </div></div>`;
-  }
-
   // ───────────── шторки (модальні вікна) ─────────────
 
   const sheets = [];
@@ -2409,6 +2390,12 @@
     if (el && el.dataset.inp === 'ratingSubj') {
       const root = el.closest('.sh-body');
       let sum = 0; let any = false;
+      root.querySelectorAll('[data-inp="ratingSubj"]').forEach((i) => { if (i.value.trim() !== '' && Number.isFinite(+i.value)) { sum += +i.value; any = true; } });
+      const t = root.querySelector('[name="points"]');
+      if (any && t) t.value = String(Math.round(sum * 100) / 100);
+    }
+  });
+
   document.addEventListener('submit', async (e) => {
     if (e.target.id === 'loginForm') {
       e.preventDefault();
@@ -2427,8 +2414,15 @@
         try {
           loginNotice = '';
           stopPending();
-          await api('POST', '/api/auth/login', { login: loginVal, password, group, deviceId });
-          await sync();
+          const r = await api('POST', '/api/auth/login', { login: loginVal, password, group, deviceId });
+          if (r.token) {
+            S.token = r.token;
+            LS.set('token', r.token);
+            S.user = r.user;
+            S.tab = 'today';
+            S.needPassword = !!(r.user && r.user.mustChangePassword);
+            await sync();
+          }
           render();
         } catch (ex) {
           err.textContent = ex.message || 'Помилка входу.';
@@ -2488,51 +2482,12 @@
           toast('Пароль успішно змінено.');
           S.needPassword = false;
           S.loginMode = 'navs';
-          await loadNavsGroups();
           render();
         }
       } catch (ex) {
         err.textContent = ex.message || 'Помилка зміни пароля.';
         btn.disabled = false;
         btn.textContent = 'Змінити пароль';
-      }
-    }
-  });
-      root.querySelectorAll('[data-inp="ratingSubj"]').forEach((i) => { if (i.value.trim() !== '' && Number.isFinite(+i.value)) { sum += +i.value; any = true; } });
-      const t = root.querySelector('[name="points"]');
-      if (any && t) t.value = String(Math.round(sum * 100) / 100);
-    }
-  });
-
-  document.addEventListener('submit', async (e) => {
-    if (e.target.id !== 'loginForm') return;
-    e.preventDefault();
-    const err = $('#loginErr');
-    const btn = $('#loginBtn');
-    const name = $('#fullName').value.replace(/\s+/g, ' ').trim();
-    err.textContent = '';
-    if (name.split(' ').length < 2) { err.textContent = 'Введіть прізвище, ім’я та по батькові.'; return; }
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spin"></span>';
-    try {
-      loginNotice = '';
-      stopPending();
-      await login(name, $('#adminPass') ? $('#adminPass').value : '');
-    } catch (ex) {
-      if (!S.user) {
-        if (ex.code === 'password_required') {
-          S.needPassword = true;
-          const w = $('#passWrap');
-          if (w) { w.hidden = false; w.style.display = 'flex'; }
-        }
-        if (ex.code === 'device_pending') {
-          setLoginMsg(ex.message, 'wait');
-          startPending(name);
-        } else {
-          setLoginMsg(ex.message, 'err');
-        }
-        btn.disabled = false;
-        btn.textContent = 'Увійти';
       }
     }
   });
