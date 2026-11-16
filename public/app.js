@@ -308,12 +308,14 @@
   }
 
   let loginNotice = '';
+  let lastLoginMode = null;
   function forceSignOut(notice) {
     removePushAsk();
     S.token = null; S.user = null;
     LS.del('token');
     resetLocal();
     closeAllSheets();
+    lastLoginMode = null; // після виходу знову показуємо стандартну форму входу
     loginNotice = notice || '';
     render();
   }
@@ -1299,7 +1301,11 @@
     if (!S.user) {
       removePushAsk();
       if (S.token) { app.innerHTML = '<div class="login-wrap"><span class="spin" style="width:28px;height:28px"></span></div>'; return; }
-      if (!$('#loginForm')) app.innerHTML = viewLogin();
+      // Перебудовуємо форму входу, якщо її ще немає АБО змінився режим (navs ⇄ legacy).
+      // Інакше «Вхід за прізвищем» не спрацює: #loginForm вже існує, і старий
+      // guard (!$('#loginForm')) не давав перемалювати форму в інший режим.
+      if (!$('#loginForm') || S.loginMode !== lastLoginMode) app.innerHTML = viewLogin();
+      lastLoginMode = S.loginMode;
       return;
     }
     // Якщо потрібно змінити тимчасовий пароль — показуємо екран зміни пароля
