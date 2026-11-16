@@ -1360,6 +1360,18 @@
     } catch (e) {
       navsGroups = [];
     }
+    // Оновлюємо випадаючий список груп на сторінці входу на місці (без повного
+    // перемалювання, щоб не витерти введене логін/пароль). Якщо логін-форма ще
+    // не відрендерена — перемалюємо загалом.
+    const sel = $('#loginGroup');
+    if (sel) {
+      const frag = navsGroups.length
+        ? navsGroups.map((g) => `<option value="${esc(g.name)}">${esc(g.name)} (курс ${g.course})</option>`).join('')
+        : '<option value="">— Завантаження…</option>';
+      sel.innerHTML = `<option value="">Оберіть свою групу</option>${frag}`;
+    } else if (!S.user && $('#loginForm')) {
+      render();
+    }
   }
 
   function viewLogin() {

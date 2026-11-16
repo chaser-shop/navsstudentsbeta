@@ -29,11 +29,16 @@ async function apiLogin(req, body) {
   return { status: res.status(), data };
 }
 
-/** Створює студента через адмін-API. */
-async function createStudent(adminTok, req, { fullName, group, role = 'student' }) {
+/**
+ * Створює студента через адмін-API.
+ * `adminDevice` — X-Device-Id, що відповідає адмін-токену (має збігатися з deviceId,
+ * за яким було підписано токен, інакше сервер відповість 401 «Сеанс не належить цьому
+ * пристрою» — див. серверна перевірка data.d === headerDevice).
+ */
+async function createStudent(adminTok, req, { fullName, group, role = 'student', adminDevice = 'pw-admin-dev' }) {
   const res = await req.post('/api/admin/members', {
     data: { fullName, group, role },
-    headers: { Authorization: `Bearer ${adminTok}`, 'X-Device-Id': 'pw-admin-dev-1' },
+    headers: { Authorization: `Bearer ${adminTok}`, 'X-Device-Id': adminDevice },
   });
   expect(res.status(), 'create member').toBe(200);
   const data = await res.json();
