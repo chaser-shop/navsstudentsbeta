@@ -253,7 +253,10 @@ function verifyToken(token) {
 }
 
 const attempts = new Map();
-function rateLimit(ip, max = 30, windowMs = 10 * 60 * 1000) {
+// Порог RateLimit можна збільшити через RATE_LIMIT_MAX (для тестів, які ділять один
+// сервер між проєктами). Production за замовчуванням: 30 / 10 хв.
+const LOGIN_RATE_MAX = Math.max(1, parseInt(process.env.RATE_LIMIT_MAX || '30', 10));
+function rateLimit(ip, max = LOGIN_RATE_MAX, windowMs = 10 * 60 * 1000) {
   const now = Date.now();
   const list = (attempts.get(ip) || []).filter((t) => now - t < windowMs);
   list.push(now);

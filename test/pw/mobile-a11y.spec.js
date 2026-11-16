@@ -3,7 +3,7 @@
  * Мобільний + viewport-аудит + базова accessibility (axe).
  */
 
-const { test, expect, request, baseUrl, apiLogin, createStudent, openApp, collectErrors } = require('./helpers');
+const { test, expect, request, baseUrl, apiLogin, createStudent, openApp, collectErrors, expectAuthenticated } = require('./helpers');
 const { AxeBuilder } = require('@axe-core/playwright');
 
 const ADMIN_NAME = process.env.PW_ADMIN_NAME || 'Адміністраторенко Адмін Адмінович';
@@ -27,10 +27,13 @@ test('M2. Доступність логін-форми (axe, без критич
 });
 
 test('M3. Доступність головної сторінки після входу', async ({ page, request }) => {
-  const r = await apiLogin(request, { fullName: ADMIN_NAME, deviceId: 'pw-a11y-dev' });
-  expect(r.status).toBe(200);
-  await openApp(page, r.data.token);
-  await expect(page.locator('.sb-user')).toBeVisible();
+  // Використовуємо те саме довірене адмін-пристрою, що й інші сценарії,
+  // щоб уникнути 403 «застосування нового пристрою адміністратором потребує
+  // погодження/паролю» (у test-середовищі без ADMIN_PASSWORD).
+  const r = await apiLogin(request, { fullName: ADMIN_NAME, deviceId: 'pw-admin-dev' });
+  expect(r.status, 'admin login').toBe(200);
+  await openApp(page, r.data.token, 'pw-admin-dev');
+  await expectAuthenticated(page);
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   const critical = results.violations.filter((v) => v.impact === 'critical');
   expect(critical.map((v) => `${v.id}: ${v.nodes.length} node(s)`), 'no critical a11y on home').toEqual([]);

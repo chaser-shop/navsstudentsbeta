@@ -3,7 +3,7 @@
  * Сценарії студента (Playwright, Chromium).
  */
 
-const { test, expect, request, baseUrl, apiLogin, createStudent, openApp, collectErrors } = require('./helpers');
+const { test, expect, request, baseUrl, apiLogin, createStudent, openApp, collectErrors, dismissPushAsk, expectAuthenticated, navigateTab } = require('./helpers');
 
 const ADMIN_NAME = process.env.PW_ADMIN_NAME || 'Адміністраторенко Адмін Адмінович';
 const DEVICE = 'pw-student-dev-1';
@@ -66,6 +66,10 @@ async function waitGroupOption(page, name) {
   await page.waitForSelector(`#loginGroup option[value="${name}"]`, { state: 'attached', timeout: 15000 });
 }
 
+/** Прибирає модальне запрошення про Web Push, яке блокує кліки по сайдбару.
+ * Реалізовано в helpers.js (openApp викликає його автоматично); тут імпортовано
+ * для явних викликів у сценаріях, де потрібно докласти додатково. */
+
 test('S2. Вхід з неправильним паролем відхиляється', async ({ page, request }) => {
   const st = await freshStudent(request);
   await page.goto(baseUrl());
@@ -96,7 +100,7 @@ test('S3. Правильний вхід + примусова зміна паро
   await page.fill('#confirmPass', 'NewSecure123');
   await page.click('#changePassBtn');
   await expect(page.locator('#changePassForm')).toBeHidden({ timeout: 15000 });
-  await expect(page.locator('.sb-user')).toBeVisible();
+  await expectAuthenticated(page, 15000);
 });
 
 test('S4. Головна + профіль + оцінки + розклад', async ({ page, request }) => {
@@ -105,12 +109,17 @@ test('S4. Головна + профіль + оцінки + розклад', asyn
   const r = await apiLogin(request, { login: st.login, password: st.newPassword, group: '201 СПД', deviceId: DEVICE });
   expect(r.status, 'student login with changed password').toBe(200);
   await openApp(page, r.data.token);
-  await expect(page.locator('.sidebar .sb-user')).toBeVisible({ timeout: 15000 });
-  await page.click('.sb-item[data-tab="settings"][data-sub="profile"]');
+  await expectAuthenticated(page, 15000);
+  // Оцінки: прямий пункт сайдбару (.sb-item[data-tab="progress"][data-sub="scores"]).
+  await navigateTab(page, 'progress', 'scores');
   await expect(page.locator('main.content')).toBeVisible({ timeout: 10000 });
-  await page.click('.sb-item[data-tab="progress"][data-sub="scores"]');
+  // Розклад: прямий пункт сайдбару.
+  await navigateTab(page, 'schedule');
   await expect(page.locator('main.content')).toBeVisible({ timeout: 10000 });
-  await page.click('.sb-item[data-tab="schedule"]');
+  // Профіль: через «Налаштування» (prefs) у сайдбарі та subnav → profile.
+  await navigateTab(page, 'settings', 'prefs');
+  const profileSub = page.locator('.subnav button[data-sub="profile"]');
+  if (await profileSub.count()) await profileSub.click();
   await expect(page.locator('main.content')).toBeVisible();
 });
 
@@ -119,8 +128,10 @@ test('S5. Безпечний вихід + повторний вхід', async ({
   await changeTempPassword(request, st);
   const r = await apiLogin(request, { login: st.login, password: st.newPassword, group: '201 СПД', deviceId: DEVICE });
   await openApp(page, r.data.token);
-  await expect(page.locator('.sb-user')).toBeVisible({ timeout: 15000 });
-  const lo = await page.request.post('/api/auth/logout');
+  await expectAuthenticated(page, 15000);
+  const lo = await page.request.post('/api/auth/logout', {
+    headers: { Authorization: `Bearer ${r.data.token}`, 'X-Device-Id': DEVICE },
+  });
   expect(lo.status(), 'logout 200').toBe(200);
   const me = await page.request.get('/api/me/scores', { headers: { Authorization: `Bearer ${r.data.token}`, 'X-Device-Id': DEVICE } });
   expect([401, 403]).toContain(me.status(), `stale session rejected (${me.status()})`);

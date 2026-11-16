@@ -1380,7 +1380,7 @@
       : '<option value="">— Завантаження…</option>';
     const isNavsMode = S.loginMode === 'navs';
     return `<div class="login-wrap"><div class="login">
-      <img class="navs-crest" src="/icons/navs-emblem.svg" alt="Емблема НАВС">
+      <img class="navs-crest" src="/icons/navs-emblem.jpg" alt="Емблема НАВС">
       <div class="navs-academy-title">Національна академія<br>внутрішніх справ</div>
       <div class="navs-diary-sub">Електронний щоденник</div>
       <form id="loginForm" autocomplete="on">
@@ -1428,7 +1428,7 @@
 
   function viewChangePassword() {
     return `<div class="login-wrap"><div class="login">
-      <img class="navs-crest" src="/icons/navs-emblem.svg" alt="Емблема НАВС">
+      <img class="navs-crest" src="/icons/navs-emblem.jpg" alt="Емблема НАВС">
       <div class="navs-academy-title">Національна академія<br>внутрішніх справ</div>
       <div class="navs-diary-sub">Зміна пароля</div>
       <form id="changePassForm" autocomplete="on">

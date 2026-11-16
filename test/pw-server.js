@@ -30,6 +30,9 @@ const ADMIN = 'Адміністраторенко Адмін Адмінович'
     GOOGLE_SHEET_GROUP: 'ТЕСТ-1',
     VAPID_SUBJECT: 'mailto:pw-test@diary.local',
     PORT: '0',
+    // Тести ділять один сервер між усіма viewport-проєктами; піднімаємо ліміт,
+    // щоб RateLimit не блокував легітимні запити (production залишається 30).
+    RATE_LIMIT_MAX: '10000',
   });
 
   const app = require(path.join(ROOT, 'server.js'));

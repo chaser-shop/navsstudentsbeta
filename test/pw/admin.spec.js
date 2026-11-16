@@ -3,7 +3,7 @@
  * Сценарії адміністратора (Playwright, Chromium).
  */
 
-const { test, expect, request, baseUrl, apiLogin, createStudent, openApp, collectErrors } = require('./helpers');
+const { test, expect, request, baseUrl, apiLogin, createStudent, openApp, collectErrors, dismissPushAsk, expectAuthenticated, navigateTab } = require('./helpers');
 
 const ADMIN_NAME = process.env.PW_ADMIN_NAME || 'Адміністраторенко Адмін Адмінович';
 
@@ -13,13 +13,31 @@ async function adminToken(req) {
   return r.data.token;
 }
 
+/** Гарантує наявність групи (ігнорує 409 «вже існує»). */
+async function ensureGroup(req, name, course = 1) {
+  const tok = await adminToken(req);
+  const res = await req.post('/api/admin/groups-full', {
+    data: { name, course, faculty: 'ННІ №1' },
+    headers: { Authorization: `Bearer ${tok}`, 'X-Device-Id': 'pw-admin-dev' },
+  });
+  if (![200, 409].includes(res.status())) {
+    throw new Error(`ensure group ${name} failed: ${res.status()} ${await res.text().catch(() => '')}`);
+  }
+}
+
 test('A1. Вхід адміністратора + адмін-панель', async ({ page, request }) => {
   const errs = collectErrors(page);
   const token = await adminToken(request);
-  await openApp(page, token);
-  await expect(page.locator('.sb-user')).toBeVisible();
-  await expect(page.locator('.sb-label', { hasText: 'Адміністрування' })).toBeVisible();
-  await page.click('.sb-item[data-tab="admin"][data-sub="overview"]');
+  await openApp(page, token, 'pw-admin-dev');
+  await expectAuthenticated(page, 15000);
+  // На десктопці — рубрика «Адміністрування» у сайдбарі (видима); на мобільному
+  // сайдбар прихований, діє нижній tabbar — там рубрики немає, тому перевіряємо
+  // лише реальну видимість (isVisible), а не наявність у DOM.
+  const adminLabel = page.locator('.sb-label', { hasText: 'Адміністрування' });
+  if (await adminLabel.isVisible().catch(() => false)) {
+    await expect(adminLabel).toBeVisible();
+  }
+  await navigateTab(page, 'admin', 'overview');
   await expect(page.locator('main.content')).toBeVisible({ timeout: 10000 });
   const critical = errs.filter((e) => e.startsWith('http5xx') || e.startsWith('pageerror'));
   expect(critical, 'no 5xx/page errors on admin panel').toEqual([]);
@@ -48,6 +66,7 @@ test('A2. Створення / редагування / архівування �
 
 test('A3. Створення студента + генерація логіна/пароля', async ({ request }) => {
   const token = await adminToken(request);
+  await ensureGroup(request, '201 СПД');
   const st = await createStudent(token, request, { fullName: `Студ PW ${Date.now() % 100000}`, group: '201 СПД' });
   expect(st.login, 'login generated').toBeTruthy();
   expect(st.tempPassword.length, 'temp password >= 8').toBeGreaterThanOrEqual(8);
@@ -56,6 +75,7 @@ test('A3. Створення студента + генерація логіна/
 
 test('A4. Призначення старости + ізоляція між групами', async ({ request }) => {
   const token = await adminToken(request);
+  await ensureGroup(request, '201 СПД');
   const st = await createStudent(token, request, { fullName: `Стар PW ${Date.now() % 100000}`, group: '201 СПД', role: 'starosta' });
   // Створюємо другу групу для ізоляційного тесту
   const g2 = await request.post('/api/admin/groups-full', {
@@ -85,6 +105,7 @@ test('A4. Призначення старости + ізоляція між гр
 
 test('A5. Блокування / розблокування / скидання пароля', async ({ request }) => {
   const token = await adminToken(request);
+  await ensureGroup(request, '201 СПД');
   const st = await createStudent(token, request, { fullName: `Блок PW ${Date.now() % 100000}`, group: '201 СПД' });
   const uid = st.user.id;
   const bl = await request.post(`/api/admin/members/${uid}/block`, {
