@@ -1375,13 +1375,14 @@
             <input class="field" id="loginUser" name="login" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="ivanenko.ip" required>
             <label class="label" for="loginPass">Пароль</label>
             <div class="pass-field-wrap">
-              <input class="field" id="loginPass" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required>
-              <button class="pass-toggle-btn" type="button" data-act="togglePass" aria-label="Показати пароль">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <input class="field" id="loginPass" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required aria-describedby="loginPassHint">
+              <button class="pass-toggle-btn" type="button" data-act="togglePass" aria-label="Показати або сховати пароль">
+                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
               </button>
             </div>
+            <span id="loginPassHint" class="muted xs" style="display:block;margin-top:-4px;margin-bottom:12px">Мінімум 8 символів, щонайменше одна літера і цифра</span>
             <label class="label" for="loginGroup">Навчальна група</label>
-            <select class="field" id="loginGroup" name="group">
+            <select class="field" id="loginGroup" name="group" aria-label="Оберіть навчальну групу">
               <option value="">Оберіть свою групу</option>
               ${groupOpts}
             </select>
@@ -1402,7 +1403,7 @@
             </div>
             <button class="btn big auto" id="loginBtn" type="submit">Увійти</button>
           `}
-          <div id="loginErr" class="err" style="text-align:center;margin-top:10px">${esc(loginNotice)}</div>
+          <div id="loginErr" class="err" style="text-align:center;margin-top:10px" role="alert" aria-live="polite">${esc(loginNotice)}</div>
         </div>
       </form>
     </div></div>`;
@@ -1417,24 +1418,25 @@
       <div class="navs-diary-sub">Зміна пароля</div>
       <form id="changePassForm" autocomplete="on">
         <div class="navs-login-card">
-          <div class="muted small" style="text-align:center;margin-bottom:12px">
+          <div class="muted small" style="text-align:center;margin-bottom:12px" role="alert">
             Ви увійшли за тимчасовим паролем. Для продовження роботи встановіть новий пароль.
           </div>
           <label class="label" for="newPass">Новий пароль</label>
           <div class="pass-field-wrap">
-            <input class="field" id="newPass" type="password" autocomplete="new-password" placeholder="Мінімум 8 символів" required minlength="8">
-            <button class="pass-toggle-btn" type="button" data-act="toggleNewPass" aria-label="Показати пароль">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <input class="field" id="newPass" type="password" autocomplete="new-password" placeholder="Мінімум 8 символів" required minlength="8" aria-describedby="newPassHint">
+            <button class="pass-toggle-btn" type="button" data-act="toggleNewPass" aria-label="Показати або сховати пароль">
+              <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
           </div>
+          <span id="newPassHint" class="muted xs" style="display:block;margin-top:-4px;margin-bottom:12px">Мінімум 8 символів, щонайменше одна літера і цифра</span>
           <label class="label" for="confirmPass">Підтвердження пароля</label>
           <div class="pass-field-wrap">
             <input class="field" id="confirmPass" type="password" autocomplete="new-password" placeholder="Повторіть пароль" required>
-            <button class="pass-toggle-btn" type="button" data-act="toggleConfirmPass" aria-label="Показати пароль">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <button class="pass-toggle-btn" type="button" data-act="toggleConfirmPass" aria-label="Показати або сховати пароль">
+              <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
           </div>
-          <div id="changePassErr" class="err" style="text-align:center"></div>
+          <div id="changePassErr" class="err" style="text-align:center" role="alert" aria-live="polite"></div>
           <button class="btn big auto" id="changePassBtn" type="submit">Змінити пароль</button>
         </div>
       </form>

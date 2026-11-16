@@ -967,3 +967,48 @@ html[data-device="320x568"], html[data-device="375x667"] { --tab-h: 50px; }
   border: 1px solid var(--line);
 }
 
+/* ───────── Focus-visible та доступність (Web Interface Guidelines) ───────── */
+.pass-toggle-btn:focus-visible,
+.btn:focus-visible,
+.field:focus-visible,
+.link:focus-visible,
+.subnav button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Touch: запобігання затримці double-tap zoom на кнопках */
+.btn,
+.pass-toggle-btn,
+.link,
+.tab {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prefers-reduced-motion: вимкнення анімацій */
+@media (prefers-reduced-motion: reduce) {
+  .navs-crest {
+    transition: none;
+  }
+  .navs-crest:hover {
+    transform: none;
+  }
+  .sched-card {
+    transition: none;
+  }
+  .sched-card:hover {
+    box-shadow: none;
+  }
+  .spin {
+    animation: none;
+  }
+}
+
+/* Focus states для нових елементів НАВС */
+.navs-login-card .field:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
