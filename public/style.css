@@ -38,8 +38,6 @@
   --ease: cubic-bezier(.2, .8, .2, 1);
   /* Типографіка: одна сім'я для всього застосунку. */
   --font: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  /* Шкала заголовків: H1 28, H2 20, H3 16, body 15, small 13.5, xs 12. */
-  --fs-h1: 28px; --fs-h2: 20px; --fs-h3: 16px; --fs-body: 15px; --fs-small: 13.5px; --fs-xs: 12px;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
