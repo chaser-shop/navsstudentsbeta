@@ -58,6 +58,20 @@
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+/* Skip link: прихована, але доступна з клавіатури (Tab) */
+.skip-link {
+  position: absolute; top: -100%; left: 16px; z-index: 999;
+  padding: 10px 16px; background: var(--surface); border: 1px solid var(--line-strong);
+  border-radius: var(--r-xs); font-size: 14px; font-weight: 600;
+  transition: top .15s;
+}
+.skip-link:focus {
+  top: calc(var(--sat) + 8px);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 html { height: 100%; -webkit-text-size-adjust: 100%; }
 /* Висоту застосунку (--app-h) і безпечні зони (--sat/--sab) виставляє device.js під конкретний iPhone. */
 html, body { height: var(--app-h, 100%); overflow: hidden; }
@@ -250,13 +264,14 @@ a.btn { text-decoration: none; }
 
 .field {
   width: 100%; min-height: 44px; padding: 10px 13px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-sm);
-  font-size: 15px; outline: none; transition: border-color .15s, box-shadow .15s;
+  font-size: 15px; transition: border-color .15s, box-shadow .15s;
 }
 .field:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.field:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .field::placeholder { color: var(--faint); }
 .field.invalid { border-color: var(--red); box-shadow: 0 0 0 4px var(--red-soft); }
 textarea.field { min-height: 96px; resize: vertical; }
-select.field { appearance: none; -webkit-appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 19px) 52%, calc(100% - 14px) 52%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 34px; }
+select.field { appearance: none; -webkit-appearance: none; background-color: var(--surface); color: var(--text); background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 19px) 52%, calc(100% - 14px) 52%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 34px; }
 /* Поле не ширше за свій контейнер: <select> за замовчуванням займає ширину найдовшого варіанта
    (довга назва предмета чи ПІБ) і виштовхував сторінку за межі екрана телефона. */
 .field { min-width: 0; max-width: 100%; }
@@ -586,8 +601,8 @@ button.kpi:active { transform: scale(.985); }
 .login .feats { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
 
 /* ───────── шторки (модальні вікна) ───────── */
-.overlay { position: fixed; top: 0; left: 0; right: 0; height: var(--app-h, 100%); z-index: 20; background: var(--scrim); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: flex-end; animation: fade .2s ease-out; }
-.sheet { width: 100%; max-width: 720px; height: 100%; max-height: 100%; background: var(--bg); display: flex; flex-direction: column; animation: rise .3s var(--ease); }
+.overlay { position: fixed; top: 0; left: 0; right: 0; height: var(--app-h, 100%); z-index: 20; background: var(--scrim); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: flex-end; animation: fade .2s ease-out; overscroll-behavior: contain; }
+.sheet { width: 100%; max-width: 720px; height: 100%; max-height: 100%; background: var(--bg); display: flex; flex-direction: column; animation: rise .3s var(--ease); overscroll-behavior: contain; }
 .sh-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: var(--sat) 10px 0; min-height: calc(56px + var(--sat)); background: var(--glass); -webkit-backdrop-filter: saturate(180%) blur(22px); backdrop-filter: saturate(180%) blur(22px); border-bottom: 1px solid var(--line); flex: none; }
 .sh-head h2 { margin: 0; font-size: 16px; font-weight: 700; flex: 1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sh-head .side { min-width: 84px; }
@@ -1000,8 +1015,20 @@ html[data-device="320x568"], html[data-device="375x667"] { --tab-h: 50px; }
   .sched-card:hover {
     box-shadow: none;
   }
-  .spin {
+  .spin,
+  .refreshing svg {
     animation: none;
+  }
+  .skel {
+    animation: none;
+  }
+  .content.enter .page,
+  .overlay,
+  .sheet,
+  .toast,
+  .tab:active {
+    animation: none;
+    transition: none;
   }
 }
 

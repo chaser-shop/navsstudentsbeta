@@ -568,7 +568,7 @@
             </label>
             <label>
               <span class="label">Вміст таблиці розкладу (HTML або CSV)</span>
-              <textarea class="field" id="msHtml" rows="8" placeholder="Вставте сюди HTML код таблиці розкладу..." required></textarea>
+              <textarea class="field" id="msHtml" rows="8" placeholder="Вставте сюди HTML-код таблиці розкладу…" required></textarea>
             </label>
             <div id="manualSchedErr" class="err" style="min-height:16px;"></div>
             <button class="btn big" type="submit" id="submitManualSchedBtn" style="width:100%;">Обробити та зберегти розклад</button>

@@ -1069,7 +1069,7 @@
       <div class="subj-grid">${cols.map((c) => `<label><span class="small muted">${esc(c)}</span><input class="field" name="s_${esc(c)}" type="number" inputmode="decimal" min="0" step="any" data-inp="ratingSubj" value="${f.subjects[c] != null ? esc(f.subjects[c]) : ''}"></label>`).join('')}</div>
       <div class="subj-grid"><label><span class="small muted">Інший предмет</span><input class="field" name="x_name" maxlength="20" placeholder="Назва"></label>
         <label><span class="small muted">Бали</span><input class="field" name="x_val" type="number" inputmode="decimal" min="0" step="any" data-inp="ratingSubj"></label></div>
-      <div class="muted small" data-role="msg"></div>
+      <div class="muted small" data-role="msg" aria-live="polite"></div>
       <div class="btn-row"><button class="btn deep" data-act="ratingCancel">Скасувати</button><button class="btn" data-act="ratingSave">Зберегти</button></div></div>`;
   }
 
@@ -1448,11 +1448,42 @@
 
   function sheetHTML(s) {
     const title = typeof s.title === 'function' ? s.title() : s.title;
-    return `<div class="sheet ${s.wide ? 'wide' : ''}" role="dialog" aria-modal="true">
-      <div class="sh-head"><div class="side"><button class="link" data-act="closeSheet">${esc(s.closeLabel || 'Закрити')}</button></div>
-        <h2>${esc(title)}</h2><div class="side r">${s.right ? s.right() : ''}</div></div>
+    return `<div class="sheet ${s.wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+      <div class="sh-head"><div class="side"><button class="link" data-act="closeSheet" type="button">${esc(s.closeLabel || 'Закрити')}</button></div>
+        <h2 id="sheetTitle">${esc(title)}</h2><div class="side r">${s.right ? s.right() : ''}</div></div>
       <div class="sh-body">${s.render()}</div></div>`;
   }
+
+  // ─── Доступність модалок: ESC, trap focus, повернення focus ───
+  let _lastFocused = null;
+  function _focusable(root) {
+    return [...root.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter((el) => el.offsetParent !== null);
+  }
+  document.addEventListener('keydown', (e) => {
+    if (!sheets.length) return;
+    const top = sheets[sheets.length - 1];
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      top.el.dispatchEvent(new CustomEvent('navs-esc-close', { bubbles: true }));
+      closeSheet();
+      return;
+    }
+    if (e.key === 'Tab') {
+      // Trap focus within the modal (aria-modal = true)
+      const items = _focusable(top.el);
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  });
 
   function openSheet(s) {
     s.el = document.createElement('div');
@@ -1463,6 +1494,11 @@
     document.body.classList.add('noscroll');
     history.pushState({ sheet: sheets.length }, '');
     if (window.Charts) Charts.mount(s.el);
+    // Focus first focusable element in the dialog
+    _lastFocused = document.activeElement;
+    const items = _focusable(s.el);
+    if (items.length) items[0].focus();
+    else { s.el.setAttribute('tabindex', '-1'); s.el.focus(); }
     return s;
   }
 
@@ -1493,6 +1529,11 @@
   function closeAllSheets() {
     while (sheets.length) sheets.pop().el.remove();
     document.body.classList.remove('noscroll');
+    // Повертаємо focus тому елементу, який був активним до відкриття модалки
+    if (_lastFocused && _lastFocused.focus && document.contains(_lastFocused)) {
+      _lastFocused.focus();
+      _lastFocused = null;
+    }
   }
 
   window.addEventListener('popstate', () => {
@@ -1536,7 +1577,7 @@
         <span class="label">Посилання на пару</span>
         <input class="field" name="link" type="url" inputmode="url" autocapitalize="none" autocorrect="off" placeholder="https://zoom.us/j/… або Meet / Teams" value="${esc((S.subjects[l.subjectKey] && S.subjects[l.subjectKey].link) || '')}">
         <div class="muted small">Посилання діє для всього предмета й одразу з’являється в усіх студентів.</div>
-        <div class="muted small" data-role="msg"></div>
+        <div class="muted small" data-role="msg" aria-live="polite"></div>
         <button class="btn deep" data-act="saveLink" data-key="${esc(l.subjectKey)}">Зберегти посилання</button>`) : ''}
       ${card(`
         <span class="label">Домашнє на пару · ${dayMonth(l.start)}</span>
@@ -1597,7 +1638,7 @@
         </div>
         ${!isMod() && !editing ? '<div class="muted small">Завдання з’явиться в усіх після того, як його підтвердить адміністратор, староста чи заступник.</div>' : ''}
         ${editing && cur && cur.status === 'rejected' ? '<div class="muted small">Це завдання відхилили. Виправте його й надішліть знову.</div>' : ''}
-        <div class="err" data-role="err"></div>
+        <div class="err" data-role="err" aria-live="assertive"></div>
         ${!editing && item.lessonID ? `<button class="btn deep" data-act="hwNone" data-lesson="${esc(item.lessonID)}">Нічого не задали</button>` : ''}
         ${editing && canEdit(cur || item) ? '<button class="btn red" data-act="hwDelete">Видалити</button>' : ''}
       </div>`,
@@ -1634,7 +1675,7 @@
           return card(`<span class="label">${esc(k)}</span>
             <input class="field" name="name" placeholder="Повна назва" value="${esc(info.fullName || '')}">
             <input class="field" name="link" type="url" inputmode="url" autocapitalize="none" autocorrect="off" placeholder="Посилання на пару (Zoom / Meet / Teams)" value="${esc(info.link || '')}">
-            <div class="muted small" data-role="msg"></div>
+            <div class="muted small" data-role="msg" aria-live="polite"></div>
             <button class="btn deep" data-act="saveSubject" data-key="${esc(k)}">Зберегти</button>`);
         }).join('');
       },
@@ -1650,7 +1691,7 @@
         if (!keys.length) return card('<span class="muted">У розкладі немає викладачів. Спочатку завантажте розклад.</span>');
         return keys.map((k) => card(`<span class="label">У розкладі: ${esc(k)}</span>
           <input class="field" name="name" placeholder="Прізвище Ім’я По батькові" autocapitalize="words" value="${esc(S.teachers[k] || '')}">
-          <div class="muted small" data-role="msg"></div>
+          <div class="muted small" data-role="msg" aria-live="polite"></div>
           <button class="btn deep" data-act="saveTeacher" data-key="${esc(k)}">Зберегти</button>`)).join('');
       },
     });

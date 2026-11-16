@@ -17,10 +17,11 @@
   <script src="/theme.js"></script>
 </head>
 <body>
+  <a href="#app" class="skip-link">Пропустити до контенту</a>
   <div id="app"></div>
-  <div id="banner" class="banner" hidden>Сервер прокидається, зачекайте до хвилини…</div>
+  <div id="banner" class="banner" hidden role="alert" aria-live="assertive">Сервер прокидається, зачекайте до хвилини…</div>
   <div id="sheets"></div>
-  <div id="toast" class="toast" hidden></div>
+  <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
   <noscript>Для роботи щоденника потрібен JavaScript.</noscript>
   <script src="/device.js"></script>
   <script src="/schedule.js"></script>

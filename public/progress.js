@@ -301,7 +301,7 @@
           <div class="muted small" style="margin-bottom:12px">Пароль має містити щонайменше 8 символів, хоча б одну літеру і одну цифру.</div>
           <label><span class="label">Новий пароль</span><input class="field" name="newPassword" type="password" autocomplete="new-password" placeholder="Мінімум 8 символів"></label>
           <label><span class="label">Підтвердження</span><input class="field" name="confirmPassword" type="password" autocomplete="new-password" placeholder="Повторіть пароль"></label>
-          <div data-role="msg" class="small ${s.msgCls}" ${s.msg ? '' : 'hidden'}>${esc(s.msg)}</div>
+          <div data-role="msg" class="small ${s.msgCls}" ${s.msg ? '' : 'hidden'} aria-live="polite">${esc(s.msg)}</div>
           <button class="btn" data-act="cpSave" ${s.submitting ? 'disabled' : ''}>${s.submitting ? '<span class="spin"></span>' : 'Зберегти пароль'}</button>
         </div>`;
       },
@@ -395,7 +395,7 @@
           <label><span class="label">Новий бал</span><input class="field" id="incValue" name="incValue" type="text" inputmode="decimal" autocomplete="off" placeholder="Наприклад, ${esc(fmt.num(Math.min(cur.max, Math.ceil((cur.value || 0) + 5))))}" data-inp="incValue"></label>
           <div class="pills">${[1, 5, 10].map((n) => `<button class="pill" data-act="incQuick" data-n="${n}">+${n}</button>`).join('')}<button class="pill" data-act="incQuick" data-n="max">Максимум</button></div>
           <div data-role="preview"></div>
-          <div class="err" data-role="err"></div>
+          <div class="err" data-role="err" aria-live="assertive"></div>
           ${ui.notice('info', 'Після збереження <b>знизити бал неможливо</b>. Зміну буде записано в історію з датою, часом і номером операції; її бачить адміністратор.')}
           <button class="btn big" data-act="incSave">${ic('check', 18)} Зберегти новий бал</button></div>`;
     };

@@ -584,7 +584,7 @@
           <label><span class="label">Новий бал (від 0 до ${num(x.max)})</span><input class="field" name="value" type="text" inputmode="decimal" autocomplete="off" placeholder="Порожнє поле — прибрати бал"></label>
           <label><span class="label">Причина виправлення</span><textarea class="field" name="reason" maxlength="300" placeholder="Наприклад: помилка під час внесення, перескладання"></textarea></label>
           <div class="muted small">Адміністратор може як підвищити, так і знизити бал. Зміну буде записано в історію з вашим ім’ям і причиною, а студент отримає сповіщення.</div>
-          <div data-role="msg" class="small" hidden></div>
+          <div data-role="msg" class="small" hidden aria-live="polite"></div>
           <button class="btn" data-act="aFixSave">Зберегти</button></div>`;
       },
     };
@@ -606,7 +606,7 @@
           <label><span class="label">Група</span><select class="field" name="group">${groups.map((x) => opt(x, x, g)).join('')}</select></label>
           <label><span class="label">Примітка</span><input class="field" name="note" value="${esc(p.student.note)}" maxlength="60" placeholder="Необов’язково" autocomplete="off"></label>
           ${p.student.fromSheet ? ui.notice('info', 'Студент синхронізується з Google-таблицею за ПІБ. Якщо змінити ПІБ лише тут, під час наступної синхронізації таблиця може створити окремий запис, — виправте ПІБ і в таблиці.') : ''}
-          <div data-role="msg" class="small" hidden></div>
+          <div data-role="msg" class="small" hidden aria-live="polite"></div>
           <button class="btn" data-act="aEditSave">Зберегти</button></div>`;
       },
     };
@@ -619,7 +619,7 @@
       title: o.title, auto: false, onOk: o.onOk,
       render: () => `<div class="form"><div>${esc(o.text)}</div>
         ${o.field ? `<label><span class="label">${esc(o.field)}</span><input class="field" name="askValue" maxlength="200" placeholder="${esc(o.placeholder || '')}" autocomplete="off"></label>` : ''}
-        <div data-role="msg" class="small" hidden></div>
+        <div data-role="msg" class="small" hidden aria-live="polite"></div>
         <button class="btn ${o.danger ? 'red' : ''}" data-act="aAskOk">${esc(o.confirm || 'Підтвердити')}</button></div>`,
     };
     D.openSheet(s);
@@ -706,7 +706,7 @@
       render: () => {
         if (!people && !g.accounts) {
           return `<div class="form"><div>Видалити групу <b>«${esc(g.name)}»</b>? Студентів і облікових записів у ній немає.</div>
-            <div data-role="msg" class="small" hidden></div>
+            <div data-role="msg" class="small" hidden aria-live="polite"></div>
             <button class="btn red" data-act="aGrpDelOk">${ic('trash', 18)} Видалити групу</button></div>`;
         }
         if (!others.length) {
@@ -716,7 +716,7 @@
           ${ui.notice('warn', `У групі <b>«${esc(g.name)}»</b>: ${esc(plural(people, 'студент', 'студенти', 'студентів'))}${g.archived ? ` (з них в архіві: ${g.archived})` : ''} і ${esc(plural(g.accounts, 'обліковий запис', 'облікові записи', 'облікових записів'))}.`)}
           <div>Студентів і облікові записи <b>не буде видалено</b>: перед видаленням групи їх перенесуть до обраної групи разом із балами, історією змін, статистикою й прив’язками облікових записів.</div>
           <label><span class="label">Перенести до групи</span><select class="field" name="moveTo">${others.map((x) => opt(x.name, `${x.name} · ${plural(x.students, 'студент', 'студенти', 'студентів')}`, '')).join('')}</select></label>
-          <div data-role="msg" class="small" hidden></div>
+          <div data-role="msg" class="small" hidden aria-live="polite"></div>
           <button class="btn red" data-act="aGrpDelOk">${ic('trash', 18)} Перенести студентів і видалити групу</button></div>`;
       },
     });
@@ -855,7 +855,7 @@
           ${s.r === 'custom' ? '<label><span class="label">Значення</span><input class="field" name="value" type="text" inputmode="decimal" autocomplete="off"></label>' : ''}
           <label><span class="label">Коментар</span><input class="field" name="note" maxlength="300" placeholder="Необов’язково" autocomplete="off"></label>
           <div class="muted small">Рішення буде записано в історію балів і журнал дій; якщо бал зміниться, студент отримає сповіщення.</div>
-          <div data-role="msg" class="small" hidden></div>
+          <div data-role="msg" class="small" hidden aria-live="polite"></div>
           <button class="btn" data-act="aResolveSave">Підтвердити рішення</button></div>`;
       },
     };
