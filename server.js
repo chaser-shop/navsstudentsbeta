@@ -851,6 +851,19 @@ route('POST', '/api/auth/login', async ({ body, ip, req }) => {
   return { token: signToken(user._id, deviceId), user: pubUser(user) };
 }, { auth: false });
 
+// — безпечне завершення сесії: від'язує поточний пристрій від акаунта (токен перестає діяти, бо user змінюється)
+route('POST', '/api/auth/logout', async ({ user, req }) => {
+  const deviceId = req.deviceId;
+  if (deviceId) {
+    await users.updateOne(
+      { _id: user._id },
+      { $pull: { deviceIds: deviceId } }
+    );
+  }
+  await audit(user, 'user.logout', { id: user._id }, {}, req.socket.remoteAddress);
+  return { ok: true };
+});
+
 // — публічний список активних груп для випадаючого списку на сторінці входу
 route('GET', '/api/auth/groups', async () => {
   const list = await ctx.col.groups.find({ active: { $ne: false }, status: { $nin: ['inactive', 'archived'] } }).sort({ _id: 1 }).toArray();
@@ -1422,8 +1435,11 @@ async function handleApi(req, res, url) {
       req.deviceKey = devKey(data.d);
       if (r.admin && !user.isAdmin) throw new HttpError(403, 'Лише для адміністратора.');
       if (r.mod && !isMod(user)) throw new HttpError(403, 'Лише для адміністратора, старости чи заступника.');
-      // Блокування доступу, доки не змінено тимчасовий пароль (окрім самого ендпоінту зміни пароля)
-      if (user.mustChangePassword && !req.url.includes('/api/auth/change-password') && !req.url.includes('/api/auth/device-status')) {
+      // Блокування доступу, доки не змінено тимчасовий пароль (окрім ендпоінтів зміни пароля, виходу та стану пристрою)
+      if (user.mustChangePassword &&
+        !req.url.includes('/api/auth/change-password') &&
+        !req.url.includes('/api/auth/logout') &&
+        !req.url.includes('/api/auth/device-status')) {
         throw new HttpError(403, 'Змініть тимчасовий пароль для доступу до системи.', { code: 'must_change_password' });
       }
       touchLastSeen(user);

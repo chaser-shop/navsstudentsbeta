@@ -323,6 +323,8 @@
       const sub = await getSub();
       if (sub) await api('POST', '/api/push/unsubscribe', { endpoint: sub.endpoint });
     } catch (e) { /* не критично */ }
+    // Безпечне завершення сесії: від'язуємо пристрій на сервері (токен більше не працюватиме)
+    try { await api('POST', '/api/auth/logout', {}); } catch (e) { /* не критично */ }
     forceSignOut('');
   }
 

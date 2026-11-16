@@ -467,3 +467,33 @@ test('10. Per-group schedule-config mapping (each internal group maps to its own
   const stu = { token: lr.data.token, deviceId: 'sec-sched' };
   assert.equal((await h.call(stu, 'POST', '/api/admin/groups-full/201%20СПД/schedule-config', { faculty: 'ХАК', course: 1 })).status, 403, 'student cannot modify schedule config');
 });
+
+test('11. Secure logout unlinks the device from the account', async () => {
+  // Створюємо студента і входимо
+  const m = await h.call(adminSession, 'POST', '/api/admin/members', {
+    fullName: 'Студент Вихід Микитович',
+    group: '201 СПД',
+    role: 'student',
+  });
+  const { login, tempPassword } = m.data.credentials;
+  const devId = 'logout-device-1';
+  const lr = await h.call(null, 'POST', '/api/auth/login', { login, password: tempPassword, group: '201 СПД', deviceId: devId });
+  assert.equal(lr.status, 200, JSON.stringify(lr.data));
+  const sess = { token: lr.data.token, deviceId: devId };
+
+  // Перевіряємо, що пристрій прив’язано
+  let dbUser = await h.ctx.col.users.findOne({ login });
+  assert.ok(dbUser.deviceIds.includes(devId), 'device linked before logout');
+
+  // Виконую безпечне завершення сесії
+  const lo = await h.call(sess, 'POST', '/api/auth/logout', {});
+  assert.equal(lo.status, 200, JSON.stringify(lo.data));
+
+  // Пристрій відв’язано
+  dbUser = await h.ctx.col.users.findOne({ login });
+  assert.ok(!dbUser.deviceIds.includes(devId), 'device unlinked after logout');
+
+  // Вхід тим самим пристроєм знову працює (останній раз, бо новий вхід відновить прив’язку)
+  const re = await h.call(null, 'POST', '/api/auth/login', { login, password: tempPassword, group: '201 СПД', deviceId: devId });
+  assert.equal(re.status, 200);
+});
