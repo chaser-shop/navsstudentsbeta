@@ -1409,6 +1409,10 @@ async function handleApi(req, res, url) {
       req.deviceKey = devKey(data.d);
       if (r.admin && !user.isAdmin) throw new HttpError(403, 'Лише для адміністратора.');
       if (r.mod && !isMod(user)) throw new HttpError(403, 'Лише для адміністратора, старости чи заступника.');
+      // Блокування доступу, доки не змінено тимчасовий пароль (окрім самого ендпоінту зміни пароля)
+      if (user.mustChangePassword && !req.url.includes('/api/auth/change-password') && !req.url.includes('/api/auth/device-status')) {
+        throw new HttpError(403, 'Змініть тимчасовий пароль для доступу до системи.', { code: 'must_change_password' });
+      }
       touchLastSeen(user);
     }
     const body = req.method === 'GET' || req.method === 'DELETE' ? {} : await readBody(req);

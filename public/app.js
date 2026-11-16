@@ -1207,7 +1207,6 @@
         { id: 'groups-full', title: 'Навчальні групи', icon: 'layers' },
         { id: 'members', title: 'Учасники', icon: 'users' },
         { id: 'schedule-admin', title: 'Розклад НАВС', icon: 'calendar' },
-        { id: 'notify', title: 'Сповіщення студентам', hidden: true, back: 'manage' },
       ],
     },
     { id: 'notifications', title: 'Сповіщення', short: 'Сповіщення', icon: 'bell', hideInTabbar: true },

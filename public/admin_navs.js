@@ -800,12 +800,16 @@
   });
 
   // ───────────── Реєстрація сторінок НАВС ─────────────
+  // Pages are defined in app.js PAGES with keys: admin/groups-full, admin/members, admin/schedule-admin
+  // The register() call in admin.js adds them to the page registry, so we just register our
+  // render functions as hooks for those page keys.
+  window.DiaryNavs = { loadGroupsFull, loadMembers, loadScheduleAdmin, renderPage };
 
   D.register({
     pages: {
-      'admin/groups': { render: viewNavsGroups, enter: () => loadGroupsFull() },
+      'admin/groups-full': { render: viewNavsGroups, enter: () => loadGroupsFull() },
       'admin/members': { render: viewNavsMembers, enter: () => { loadGroupsFull(); loadMembers(); } },
-      'admin/schedule': { render: viewNavsScheduleAdmin, enter: () => loadScheduleAdmin() },
+      'admin/schedule-admin': { render: viewNavsScheduleAdmin, enter: () => loadScheduleAdmin() },
     },
     actions: {
       navsGroupCreate: openCreateGroupModal,
