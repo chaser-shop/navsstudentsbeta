@@ -15,12 +15,6 @@
 
   const RENDERERS = { groups: viewNavsGroups, members: viewNavsMembers, schedule: viewNavsScheduleAdmin };
 
-  D.renderPage = function (key) {
-    const fn = RENDERERS[key];
-    if (fn) return fn();
-    return '';
-  };
-
   const M = {
     groupsFull: null,
     members: null,
@@ -801,6 +795,11 @@
   // Pages are defined in app.js PAGES with keys: admin/groups-full, admin/members, admin/schedule-admin
   // The register() call in admin.js adds them to the page registry, so we just register our
   // render functions as hooks for those page keys.
+  function renderPage(key) {
+    const fn = RENDERERS[key];
+    if (fn) return fn();
+    return '';
+  }
   window.DiaryNavs = { loadGroupsFull, loadMembers, loadScheduleAdmin, renderPage };
 
   D.register({

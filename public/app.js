@@ -1232,9 +1232,10 @@
     'admin/grades': { render: viewGrades, enter: () => loadGrades() },
     'admin/notify': { render: viewNotify, enter: () => loadNotifyUsers() },
     'settings/prefs': { render: viewSettings },
-    'admin/groups-full': { render: viewAdminWrapper('groups'), enter: () => { if (window.DiaryNavs) DiaryNavs.loadGroupsFull(); } },
-    'admin/members': { render: viewAdminWrapper('members'), enter: () => { if (window.DiaryNavs) DiaryNavs.loadMembers(); } },
-    'admin/schedule-admin': { render: viewAdminWrapper('schedule'), enter: () => { if (window.DiaryNavs) DiaryNavs.loadScheduleAdmin(); } },
+    // Сторінки НАВС (groups-full / members / schedule-admin) реєструє модуль
+    // admin_navs.js через Diary.register({ pages: { 'admin/groups-full': {...}, ... } }).
+    // Там же window.DiaryNavs = { loadGroupsFull, loadMembers, loadScheduleAdmin, renderPage }.
+    // Ми НЕ пишемо сюди viewAdminWrapper — вона не існувала і ламала завантаження.
   };
   const HOOKS = {};
   const CHG = {};

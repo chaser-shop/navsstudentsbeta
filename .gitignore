@@ -1,2 +1,6 @@
 node_modules
 .env
+
+# Playwright reports
+test/reports/
+test/pw-meta.json

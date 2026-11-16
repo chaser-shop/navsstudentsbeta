@@ -11,7 +11,10 @@
     "start": "node server.js",
     "test": "node --test test/*.test.js",
     "dev:memory": "node scripts/dev-memory.js",
-    "make-admin": "node scripts/make-admin.js"
+    "make-admin": "node scripts/make-admin.js",
+    "test:e2e": "playwright test",
+    "test:e2e:report": "playwright show-report test/reports/playwright",
+    "pw:install": "playwright install chromium"
   },
   "dependencies": {
     "argon2": "^0.45.2",
@@ -19,6 +22,9 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
-    "mongodb-memory-server-core": "^10.4.3"
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "^1.65.1",
+    "mongodb-memory-server-core": "^10.4.3",
+    "playwright": "^1.65.1"
   }
 }
