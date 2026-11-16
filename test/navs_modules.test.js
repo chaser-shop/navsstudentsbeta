@@ -383,3 +383,87 @@ test('8. Password reset by admin sets mustChangePassword=true again', async () =
   const dbUser = await h.ctx.col.users.findOne({ _id: student._id });
   assert.equal(dbUser.mustChangePassword, true);
 });
+
+test('9. Security: student cannot impersonate admin, wrong-group rejected, role isolation', async () => {
+  // Створюємо студента з відомим паролем (щоб не залежати від стану тестів 7/8)
+  const m = await h.call(adminSession, 'POST', '/api/admin/members', {
+    fullName: 'Студент Захисту Андрійович',
+    group: '201 СПД',
+    role: 'student',
+  });
+  assert.equal(m.status, 200);
+  const { login, tempPassword } = m.data.credentials;
+  assert.ok(login && tempPassword);
+
+  // ── a) Студент групи «201 СПД» НЕ може увійти, заявляючи чужу групу ──
+  const wrongGroup = await h.call(null, 'POST', '/api/auth/login', {
+    login,
+    password: tempPassword,
+    group: 'ТЕСТ-1', // чужа група
+    deviceId: 'test-sec-1',
+  });
+  assert.equal(wrongGroup.status, 403, 'student in group A must not log in claiming group B');
+
+  // ── b) Студент не має доступу до адмін-маршрутів ──
+  const lr = await h.call(null, 'POST', '/api/auth/login', {
+    login,
+    password: tempPassword,
+    group: '201 СПД',
+    deviceId: 'test-sec-2',
+  });
+  assert.equal(lr.status, 200, JSON.stringify(lr.data));
+  const stuSession = { token: lr.data.token, deviceId: 'test-sec-2' };
+
+  // Студент не може читати список учасників
+  assert.equal((await h.call(stuSession, 'GET', '/api/admin/members')).status, 403, 'GET /api/admin/members must be 403 for student');
+  // Студент не може створювати групи
+  assert.equal((await h.call(stuSession, 'POST', '/api/admin/groups-full', { name: 'ХАК ГРУПА' })).status, 403, 'POST /api/admin/groups-full must be 403 for student');
+  // Студент не може синхронізувати розклад
+  assert.equal((await h.call(stuSession, 'POST', '/api/admin/schedule/sync')).status, 403, 'POST /api/admin/schedule/sync must be 403 for student');
+
+  // ── c) Публічний список груп не розкриває архівовані/неактивні ──
+  const pub = await h.call(null, 'GET', '/api/auth/groups');
+  assert.equal(pub.status, 200);
+  assert.ok(!pub.data.groups.some((g) => g.status === 'archived'), 'archived groups must not appear in public login list');
+});
+
+test('10. Per-group schedule-config mapping (each internal group maps to its own external timetable)', async () => {
+  // Створюємо другу групу
+  await h.call(adminSession, 'POST', '/api/admin/groups-full', { name: '202 СПД', course: 2, faculty: 'ННІ №1' });
+
+  // Група 201 СПД → зовнішній розклад: ННІ поліцейської діяльності, курс 1, зовнішня група «101»
+  const c1 = await h.call(adminSession, 'POST', '/api/admin/groups-full/201%20СПД/schedule-config', {
+    faculty: 'Навчально-науковий інститут поліцейської діяльності',
+    course: 1,
+    externalGroup: '101',
+    autoSync: true,
+  });
+  assert.equal(c1.status, 200, JSON.stringify(c1.data));
+  assert.equal(c1.data.scheduleConfig.faculty, 'Навчально-науковий інститут поліцейської діяльності');
+  assert.equal(c1.data.scheduleConfig.externalGroup, '101');
+
+  // Група 202 СПД → інший зовнішній розклад: ННІ права, курс 2, зовнішня група «202»
+  const c2 = await h.call(adminSession, 'POST', '/api/admin/groups-full/202%20СПД/schedule-config', {
+    faculty: 'Навчально-науковиий інститут права та психології',
+    course: 2,
+    externalGroup: '202',
+    autoSync: true,
+  });
+  assert.equal(c2.status, 200, JSON.stringify(c2.data));
+
+  // Перевіряємо ізоляцію: кожна група має СВОЮ конфігурацію, не спільну
+  const g1 = await h.ctx.col.groups.findOne({ _id: '201 СПД' });
+  const g2 = await h.ctx.col.groups.findOne({ _id: '202 СПД' });
+  assert.equal(g1.scheduleConfig.faculty, 'Навчально-науковий інститут поліцейської діяльності');
+  assert.equal(g2.scheduleConfig.faculty, 'Навчально-науковиий інститут права та психології');
+  assert.equal(g1.scheduleConfig.course, 1);
+  assert.equal(g2.scheduleConfig.course, 2);
+  assert.notEqual(g1.scheduleConfig.externalGroup, g2.scheduleConfig.externalGroup);
+
+  // Студент (не адмін) не може змінювати налаштування розкладу
+  const m = await h.call(adminSession, 'POST', '/api/admin/members', { fullName: 'Студент Розкладу Іванович', group: '201 СПД', role: 'student' });
+  const lr = await h.call(null, 'POST', '/api/auth/login', { login: m.data.credentials.login, password: m.data.credentials.tempPassword, group: '201 СПД', deviceId: 'sec-sched' });
+  assert.equal(lr.status, 200);
+  const stu = { token: lr.data.token, deviceId: 'sec-sched' };
+  assert.equal((await h.call(stu, 'POST', '/api/admin/groups-full/201%20СПД/schedule-config', { faculty: 'ХАК', course: 1 })).status, 403, 'student cannot modify schedule config');
+});

@@ -202,6 +202,17 @@ async function initDb() {
     c.audit.createIndex({ 'target.id': 1, at: -1 }),
   ]);
 
+  // ─── Індексі для нових НАВС-колекцій (авторизація, синхронізація розкладу) ───
+  await Promise.all([
+    users.createIndex({ login: 1 }, { sparse: true }),
+    users.createIndex({ group: 1 }),
+    c.notifications.createIndex({ userId: 1 }),
+    db.collection('navs_schedule').createIndex({ group: 1, start: 1 }),
+    db.collection('navs_schedule').createIndex({ lid: 1, group: 1 }),
+    db.collection('schedule_changes').createIndex({ group: 1, detectedAt: -1 }),
+    db.collection('schedule_sync_runs').createIndex({ startedAt: -1 }),
+  ]);
+
   await migrate();
 
   SECRET = process.env.JWT_SECRET || (await getConfig('jwtSecret', () => crypto.randomBytes(32).toString('hex')));
@@ -747,10 +758,12 @@ route('POST', '/api/auth/login', async ({ body, ip, req }) => {
     if (user.passwordHash) {
       passwordOk = await verifyPassword(password, user.passwordHash);
     } else if (user.isAdmin && ADMIN_PASSWORD) {
+      // Адміністратор без hash: порівняння з ADMIN_PASSWORD лише для акаунтів адміністраторів
       passwordOk = safeEq(password, ADMIN_PASSWORD);
-    } else if (ADMIN_PASSWORD && safeEq(password, ADMIN_PASSWORD)) {
-      passwordOk = true;
     }
+    // Примітка: якщо user.passwordHash відсутня і user не адмін — passwordOk залишається false.
+    // Раніше тут був fallback: `else if (ADMIN_PASSWORD && safeEq(password, ADMIN_PASSWORD))`,
+    // що дозволяло БУДЬ-якому студенту увійти з паролем адміністратора. Прибрано (безпека).
 
     if (!passwordOk) {
       const failed = (user.failedAttempts || 0) + 1;
