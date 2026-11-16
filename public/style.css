@@ -1061,3 +1061,11 @@ html[data-device="320x568"], html[data-device="375x667"] { --tab-h: 50px; }
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
+
+/* ───────── Каскадний вибір: Факультет → Курс → Група ───────── */
+.cascade { display: grid; gap: 4px; text-align: left; }
+.cascade-item { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cascade-item .field { width: 100%; text-overflow: ellipsis; }
+.cascade select:disabled { opacity: .55; cursor: not-allowed; }
+.cascade.row { grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr) minmax(0, 1.4fr); gap: 12px; align-items: end; }
+@media (max-width: 640px) { .cascade.row { grid-template-columns: 1fr; } }

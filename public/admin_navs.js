@@ -13,6 +13,8 @@
   const $ = (s, r = document) => r.querySelector(s);
   const render = () => D.render();
 
+  const NC = () => window.NavsCascade;
+
   const RENDERERS = { groups: viewNavsGroups, members: viewNavsMembers, schedule: viewNavsScheduleAdmin };
 
   const M = {
@@ -25,6 +27,7 @@
     schedChanges: null,
     schedRuns: null,
     selectedGroup: '101 СПД',
+    schedSel: null, // вибір каскаду {faculty, course, group} на сторінці розкладу
   };
 
   // ───────────────────────── Завантаження даних ─────────────────────────
@@ -135,6 +138,13 @@
     return h;
   }
 
+  // Список факультетів/інститутів НАВС + ті, що вже є в базі (щоб не губити старі значення, напр. «ННІ №1»).
+  function facultyOptions(current) {
+    const used = (M.groupsFull || []).map((g) => g.faculty).filter(Boolean);
+    const list = [...new Set([...NC().FACULTIES, ...used, current].filter(Boolean))];
+    return list.map((f) => `<option value="${esc(f)}" ${f === current ? 'selected' : ''}>${esc(f)}</option>`).join('');
+  }
+
   function openCreateGroupModal() {
     D.openSheet({
       title: 'Створення нової групи',
@@ -157,12 +167,7 @@
             </label>
             <label>
               <span class="label">Факультет / Інститут</span>
-              <select class="field" name="groupFaculty" id="cgFaculty">
-                <option value="ННІ №1">ННІ №1 (Слідство та дізнання)</option>
-                <option value="ННІ №2">ННІ №2 (Кримінальна поліція)</option>
-                <option value="ННІ №3">ННІ №3 (Превентивна діяльність)</option>
-                <option value="ННІ №4">ННІ №4 (Право та правоохоронна діяльність)</option>
-              </select>
+              <select class="field" name="groupFaculty" id="cgFaculty">${facultyOptions('')}</select>
             </label>
             <div id="createGroupErr" class="err" style="min-height:16px;"></div>
             <button class="btn big" type="submit" id="submitCreateGroupBtn" style="width:100%;">Створити групу</button>
@@ -303,12 +308,7 @@
             </div>
             <label>
               <span class="label">Факультет</span>
-              <select class="field" id="scFaculty">
-                <option value="ННІ №1" ${cfg.faculty === 'ННІ №1' ? 'selected' : ''}>ННІ №1 (Слідство та дізнання)</option>
-                <option value="ННІ №2" ${cfg.faculty === 'ННІ №2' ? 'selected' : ''}>ННІ №2 (Кримінальна поліція)</option>
-                <option value="ННІ №3" ${cfg.faculty === 'ННІ №3' ? 'selected' : ''}>ННІ №3 (Превентивна діяльність)</option>
-                <option value="ННІ №4" ${cfg.faculty === 'ННІ №4' ? 'selected' : ''}>ННІ №4 (Право та правоохоронна діяльність)</option>
-              </select>
+              <select class="field" id="scFaculty">${facultyOptions(cfg.faculty || (g && g.faculty) || '')}</select>
             </label>
             <label>
               <span class="label">Курс</span>
@@ -475,7 +475,25 @@
     const cfg = M.schedSettings.config || {};
     const lastRun = (M.schedRuns && M.schedRuns[0]) || null;
 
+    const groups = M.groupsFull || [];
+    if (!M.schedSel) M.schedSel = NC().selectionFor(groups, M.selectedGroup);
+    const sel = M.schedSel || {};
+    const picked = sel.group || '';
+    const gObj = groups.find((g) => g.name === picked);
+
     let h = `
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title" style="font-size:18px;">Параметри розкладу групи</div>
+        <div class="card-sub" style="margin-bottom:12px;">Оберіть факультет, потім курс і групу — так само, як у розкладі на сайті академії.</div>
+        ${NC().html('sa', groups, sel, { layout: 'row' })}
+        <div class="btn-row" style="margin-top:14px;">
+          ${picked ? `
+            <span class="muted small" style="align-self:center;">Обрано: <b>${esc(picked)}</b>${gObj ? ` · ${esc(gObj.course)} курс · ${esc(gObj.faculty)}` : ''}</span>
+            <button class="btn small ghost auto" data-act="navsGroupSched" data-id="${esc(picked)}">Налаштувати розклад групи</button>
+          ` : '<span class="muted small">Група не обрана — зміни й оновлення стосуватимуться всіх груп.</span>'}
+        </div>
+      </div>
+
       <div class="card" style="margin-bottom:16px;">
         <div class="spread wrap" style="gap:12px;">
           <div>
@@ -556,9 +574,7 @@
             </div>
             <label>
               <span class="label">Навчальна група</span>
-              <select class="field" id="msGroup" required>
-                ${(M.groupsFull || []).map((g) => `<option value="${esc(g.name)}">${esc(g.name)}</option>`).join('')}
-              </select>
+              ${NC().html('ms', M.groupsFull || [], NC().selectionFor(M.groupsFull || [], M.selectedGroup), { labels: false })}
             </label>
             <label>
               <span class="label">Вміст таблиці розкладу (HTML або CSV)</span>
@@ -667,6 +683,7 @@
     if (e.target.id === 'manualSchedForm') {
       e.preventDefault();
       const group = $('#msGroup').value;
+      if (!group) { $('#manualSchedErr').textContent = 'Оберіть факультет, курс і групу.'; return; }
       const html = $('#msHtml').value.trim();
       const err = $('#manualSchedErr');
       const btn = $('#submitManualSchedBtn');
@@ -752,7 +769,8 @@
       syncNowBtn.disabled = true;
       syncNowBtn.innerHTML = '<span class="spin"></span> Оновлюю…';
       try {
-        const res = await api('POST', '/api/admin/schedule/sync');
+        const g = (M.schedSel && M.schedSel.group) || '';
+        const res = await api('POST', '/api/admin/schedule/sync', g ? { group: g } : {});
         toast('Синхронізація розкладу завершена!');
         loadScheduleAdmin();
       } catch (ex) {
@@ -791,6 +809,17 @@
     if (stBtn) openStarostaAssignModal(stBtn.dataset.id);
   });
 
+  // Каскад «Факультет → Курс → Група» на сторінці розкладу: обрана група визначає журнал змін.
+  document.addEventListener('navs-cascade', (e) => {
+    const d = e.detail || {};
+    if (d.prefix !== 'sa') return;
+    M.schedSel = { faculty: d.faculty, course: d.course, group: d.group };
+    if (d.level === 'group' || !d.group) {
+      M.selectedGroup = d.group || '';
+      loadScheduleAdmin();
+    }
+  });
+
   // ───────────── Реєстрація сторінок НАВС ─────────────
   // Pages are defined in app.js PAGES with keys: admin/groups-full, admin/members, admin/schedule-admin
   // The register() call in admin.js adds them to the page registry, so we just register our
@@ -806,7 +835,7 @@
     pages: {
       'admin/groups-full': { render: viewNavsGroups, enter: () => loadGroupsFull() },
       'admin/members': { render: viewNavsMembers, enter: () => { loadGroupsFull(); loadMembers(); } },
-      'admin/schedule-admin': { render: viewNavsScheduleAdmin, enter: () => loadScheduleAdmin() },
+      'admin/schedule-admin': { render: viewNavsScheduleAdmin, enter: () => { loadGroupsFull(); loadScheduleAdmin(); } },
     },
     actions: {
       navsGroupCreate: openCreateGroupModal,

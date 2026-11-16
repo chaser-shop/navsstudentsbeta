@@ -47,23 +47,30 @@ test('S1. Відкриття сторінки входу + емблема НАВ
   const errs = collectErrors(page);
   await page.goto(baseUrl());
   await expect(page.locator('img.navs-crest')).toBeVisible();
-  const groupSel = page.locator('#loginGroup');
-  await expect(groupSel).toBeVisible();
-  const opts = await groupSel.locator('option').allTextContents();
-  expect(opts.length, 'group options loaded').toBeGreaterThan(0);
+  await expect(page.locator('#loginFaculty')).toBeVisible();
+  await expect(page.locator('#loginCourse')).toBeDisabled();
+  await expect(page.locator('#loginGroup')).toBeDisabled();
+  await expect.poll(async () => page.locator('#loginFaculty option').count(), { timeout: 15000 }).toBeGreaterThan(1);
   const critical = errs.filter((e) => e.startsWith('http5xx') || e.startsWith('pageerror'));
   expect(critical, 'no 5xx/page errors on login').toEqual([]);
 });
 
-/** Чекає, поки у випадаючому списку груп на сторінці входу з'явиться група `name`.
- * Опції <option> не мають стану "visible" у DOM (приховані, доки <select> не відкрито),
- * тому очікуємо на state 'attached'. */
+/** Каскад «Факультет → Курс → Група»: чекає, поки у списку факультетів з'являться дані. */
 async function waitGroupOption(page, name) {
-  await page.waitForSelector('#loginGroup option', { state: 'attached', timeout: 15000 });
-  const present = await page.locator(`#loginGroup option[value="${name}"]`).count();
-  if (present > 0) return;
-  // loadNavsGroups оновлює select асинхронно — чекаємо появи нужної опції.
-  await page.waitForSelector(`#loginGroup option[value="${name}"]`, { state: 'attached', timeout: 15000 });
+  await expect.poll(async () => page.locator('#loginFaculty option').count(), { timeout: 15000 }).toBeGreaterThan(1);
+  const { groups } = await (await page.request.get(baseUrl() + '/api/auth/groups')).json();
+  if (!groups.some((x) => x.name === name)) throw new Error(`Групу «${name}» не знайдено серед активних`);
+}
+
+/** Обирає групу через каскад: факультет → курс → група (як це робить користувач). */
+async function pickGroup(page, name) {
+  const { groups } = await (await page.request.get(baseUrl() + '/api/auth/groups')).json();
+  const g = groups.find((x) => x.name === name);
+  await page.selectOption('#loginFaculty', g.faculty);
+  await expect(page.locator('#loginCourse')).toBeEnabled();
+  await page.selectOption('#loginCourse', String(g.course));
+  await expect(page.locator('#loginGroup')).toBeEnabled();
+  await page.selectOption('#loginGroup', name);
 }
 
 /** Прибирає модальне запрошення про Web Push, яке блокує кліки по сайдбару.
@@ -76,7 +83,7 @@ test('S2. Вхід з неправильним паролем відхиляєт
   await waitGroupOption(page, '201 СПД');
   await page.fill('#loginUser', st.login);
   await page.fill('#loginPass', 'WrongPassword1');
-  await page.selectOption('#loginGroup', '201 СПД');
+  await pickGroup(page, '201 СПД');
   await page.click('#loginBtn');
   // Чекаємо, поки сервер відповість і повідомлення про помилку з'явиться.
   const errEl = page.locator('#loginErr');
@@ -93,7 +100,7 @@ test('S3. Правильний вхід + примусова зміна паро
   await waitGroupOption(page, '201 СПД');
   await page.fill('#loginUser', st.login);
   await page.fill('#loginPass', st.tempPassword);
-  await page.selectOption('#loginGroup', '201 СПД');
+  await pickGroup(page, '201 СПД');
   await page.click('#loginBtn');
   await expect(page.locator('#changePassForm')).toBeVisible({ timeout: 10000 });
   await page.fill('#newPass', 'NewSecure123');

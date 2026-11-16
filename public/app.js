@@ -1363,21 +1363,15 @@
     // Оновлюємо випадаючий список груп на сторінці входу на місці (без повного
     // перемалювання, щоб не витерти введене логін/пароль). Якщо логін-форма ще
     // не відрендерена — перемалюємо загалом.
-    const sel = $('#loginGroup');
-    if (sel) {
-      const frag = navsGroups.length
-        ? navsGroups.map((g) => `<option value="${esc(g.name)}">${esc(g.name)} (курс ${g.course})</option>`).join('')
-        : '<option value="">— Завантаження…</option>';
-      sel.innerHTML = `<option value="">Оберіть свою групу</option>${frag}`;
+    const box = $('#loginCascade');
+    if (box) {
+      box.innerHTML = window.NavsCascade.html('login', navsGroups, window.NavsCascade.value('login'));
     } else if (!S.user && $('#loginForm')) {
       render();
     }
   }
 
   function viewLogin() {
-    const groupOpts = navsGroups.length
-      ? navsGroups.map((g) => `<option value="${esc(g.name)}">${esc(g.name)} (курс ${g.course})</option>`).join('')
-      : '<option value="">— Завантаження…</option>';
     const isNavsMode = S.loginMode === 'navs';
     return `<div class="login-wrap"><div class="login">
       <img class="navs-crest" src="/icons/navs-emblem.jpg" alt="Емблема НАВС">
@@ -1396,11 +1390,7 @@
               </button>
             </div>
             <span id="loginPassHint" class="muted xs" style="display:block;margin-top:-4px;margin-bottom:12px">Мінімум 8 символів, щонайменше одна літера і цифра</span>
-            <label class="label" for="loginGroup">Навчальна група</label>
-            <select class="field" id="loginGroup" name="group" aria-label="Оберіть навчальну групу">
-              <option value="">Оберіть свою групу</option>
-              ${groupOpts}
-            </select>
+            <div id="loginCascade">${window.NavsCascade.html('login', navsGroups)}</div>
             <button class="btn big auto" id="loginBtn" type="submit">Увійти</button>
             <div class="muted small" style="text-align:center;margin-top:8px">
               <button class="link small" type="button" data-act="loginModeLegacy">Вхід за прізвищем</button>
@@ -2316,7 +2306,7 @@
       S.loginMode = 'navs';
       loadNavsGroups();
       render();
-      setTimeout(() => { const g = $('#loginGroup'); if (g && !g.value) g.focus(); else { const l = $('#loginUser'); if (l) l.focus(); } }, 50);
+      setTimeout(() => { const l = $('#loginUser'); if (l) l.focus(); }, 50);
     },
     loginModeLegacy() {
       S.loginMode = 'legacy';
@@ -2466,7 +2456,7 @@
         err.textContent = '';
         if (!loginVal) { err.textContent = 'Введіть логін.'; return; }
         if (!password) { err.textContent = 'Введіть пароль.'; return; }
-        if (!group) { err.textContent = 'Оберіть навчальну групу.'; return; }
+        if (!group) { err.textContent = 'Оберіть факультет, курс і групу.'; return; }
         btn.disabled = true;
         btn.innerHTML = '<span class="spin"></span>';
         try {
